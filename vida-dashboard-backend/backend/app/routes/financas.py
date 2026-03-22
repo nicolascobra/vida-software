@@ -5,10 +5,11 @@ from datetime import date
 from typing import List, Optional
 
 from app.database import get_db
-from app.models.financas import CentroCusto, Transacao
+from app.models.financas import CentroCusto, Transacao, ConfiguracaoFinanceira
 from app.schemas.financas import (
     CentroCustoCreate, CentroCustoResponse,
     TransacaoCreate, TransacaoResponse,
+    ConfiguracaoFinanceiraCreate, ConfiguracaoFinanceiraResponse,
 )
 
 router = APIRouter()
@@ -62,6 +63,7 @@ def listar_transacoes(
     data_inicio: Optional[date] = Query(None),
     data_fim: Optional[date] = Query(None),
     tipo: Optional[str] = Query(None),
+    custo_fixo: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
 ):
     q = db.query(Transacao).filter(Transacao.user_id == user_id)
@@ -71,7 +73,30 @@ def listar_transacoes(
         q = q.filter(Transacao.data <= data_fim)
     if tipo:
         q = q.filter(Transacao.tipo == tipo)
+    if custo_fixo is not None:
+        q = q.filter(Transacao.custo_fixo == custo_fixo)
     return q.order_by(Transacao.data.desc()).all()
+
+
+# ── Configuração Financeira (renda mensal) ────────────────
+
+@router.post("/renda", response_model=ConfiguracaoFinanceiraResponse)
+def configurar_renda(config: ConfiguracaoFinanceiraCreate, db: Session = Depends(get_db)):
+    db_config = ConfiguracaoFinanceira(**config.model_dump())
+    db.add(db_config)
+    db.commit()
+    db.refresh(db_config)
+    return db_config
+
+
+@router.get("/renda/{user_id}", response_model=List[ConfiguracaoFinanceiraResponse])
+def listar_renda(user_id: str, db: Session = Depends(get_db)):
+    return (
+        db.query(ConfiguracaoFinanceira)
+        .filter(ConfiguracaoFinanceira.user_id == user_id)
+        .order_by(ConfiguracaoFinanceira.mes_referencia.desc())
+        .all()
+    )
 
 
 # ── Resumo Mensal por Categoria ───────────────────────────
