@@ -107,19 +107,11 @@ export default function Financeiro() {
 
       {showScanner && (
         <QRCodeScanner 
-          onManualInput={() => setShowScanner(false)}
-          onScanSuccess={(data) => {
+          onClose={() => setShowScanner(false)}
+          onSaveSuccess={() => {
             setShowScanner(false);
-            if (data.erro === "nao_disponivel") {
-              setStatus('❌ Não foi possível ler a nota. Preencha manualmente.');
-              setTimeout(() => setStatus(null), 4000);
-              return;
-            }
-            if (data.valor_total) setValor(data.valor_total.toString().replace('.', ','));
-            if (data.data) setData(data.data);
-            if (data.estabelecimento) setDescricao(data.estabelecimento);
-            setStatus('✅ Preenchido a partir da Nota!');
-            setTimeout(() => setStatus(null), 4000);
+            setStatus('Lançamento salvo! 💰');
+            setTimeout(() => setStatus(null), 3000);
           }}
         />
       )}
