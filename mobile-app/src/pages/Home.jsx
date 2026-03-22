@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 const T = {
   glass:       'rgba(255,255,255,0.55)',
@@ -20,6 +21,7 @@ const MODULOS = [
 export default function Home() {
   const navigate = useNavigate();
   const userId = localStorage.getItem('user_id') || 'Usuário';
+  const { canInstall, isIOS, isInstalled, handleInstall } = usePWAInstall();
 
   const handleLogout = () => {
     localStorage.removeItem('user_id');
@@ -36,6 +38,35 @@ export default function Home() {
           Vida App
         </h1>
       </div>
+
+      {!isInstalled && (
+        <div style={{ marginBottom: 24 }}>
+          {canInstall && (
+            <button
+              onClick={handleInstall}
+              style={{
+                background: T.ink, color: '#fff', border: 'none', borderRadius: 14,
+                padding: '16px', fontFamily: T.fontBody, fontSize: 16, fontWeight: 700,
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              }}
+            >
+              <span style={{ fontSize: 20 }}>📲</span> Instalar App
+            </button>
+          )}
+
+          {isIOS && !canInstall && (
+            <div style={{
+              background: T.glass, backdropFilter: T.blur, WebkitBackdropFilter: T.blur,
+              borderRadius: 14, padding: '16px', border: `1px solid ${T.glassBorder}`,
+              textAlign: 'center', fontFamily: T.fontBody, fontSize: 14, color: T.ink,
+              fontWeight: 600, boxShadow: '0 4px 16px rgba(0,0,0,0.04)'
+            }}>
+              Para instalar: toque em Compartilhar <span style={{fontSize: 18}}>↑</span> → 'Adicionar à tela de início'
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {MODULOS.map((m) => (
