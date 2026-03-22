@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Exercicios from './pages/Exercicios'
+import ExerciciosCompact from './pages/ExerciciosCompact'
 import Financas from './pages/Financas'
 
 // PrivateRoute é um "segurança da porta":
@@ -18,7 +19,8 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard"   element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/exercicios"  element={<PrivateRoute><Exercicios /></PrivateRoute>} />
+        <Route path="/exercicios"         element={<PrivateRoute><Exercicios /></PrivateRoute>} />
+        <Route path="/exercicios-compact" element={<PrivateRoute><ExerciciosCompact /></PrivateRoute>} />
         <Route path="/financas"    element={<PrivateRoute><Financas /></PrivateRoute>} />
       </Routes>
     </BrowserRouter>
