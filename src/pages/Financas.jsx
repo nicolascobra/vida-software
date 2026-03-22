@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import DateRangeSlider from '../components/DateRangeSlider'
 import {
   BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
+  XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell,
 } from 'recharts'
 import api from '../services/api'
@@ -22,7 +22,7 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
 // ─── Tokens ───────────────────────────────────────────────────────────────────
 
 const T = {
-  bgGradient:  'linear-gradient(135deg, #d4d4d4 0%, #e8e8e8 40%, #f4f4f4 70%, #ffffff 100%)',
+  bgGradient:  '#ffffff',
   glass:       'rgba(255,255,255,0.55)',
   glassBorder: 'rgba(255,255,255,0.90)',
   blur:        'blur(28px) saturate(200%)',
@@ -274,8 +274,7 @@ function CategoriaBar({ categoria, realizado, limite, percentual, selected, onCl
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function Financas() {
-  const navigate = useNavigate()
-  const userId   = localStorage.getItem('user_id') || 'nicolas'
+  const userId    = localStorage.getItem('user_id') || 'nicolas'
   const hoje     = new Date()
 
   const [mes, setMes] = useState(hoje.getMonth() + 1)
@@ -411,6 +410,48 @@ export default function Financas() {
 
   const saldo = resumo?.saldo ?? 0
 
+  // ── Calendário heatmap ─────────────────────────────────────────────────────
+  const primeiroDiaSemana = new Date(ano, mes - 1, 1).getDay()
+  const totalDiasMes      = new Date(ano, mes, 0).getDate()
+  const hojeStr           = new Date().toISOString().split('T')[0]
+
+  const spendingByDay = useMemo(() => {
+    const m = {}
+    transacoes.filter(t => t.tipo === 'saida').forEach(t => {
+      const day = parseInt(t.data.split('-')[2])
+      m[day] = (m[day] || 0) + t.valor
+    })
+    return m
+  }, [transacoes])
+
+  const maxDaySpending = useMemo(() =>
+    Math.max(...Object.values(spendingByDay), 1),
+  [spendingByDay])
+
+  const incomeByDay = useMemo(() => {
+    const m = {}
+    transacoes.filter(t => t.tipo === 'entrada').forEach(t => {
+      const day = parseInt(t.data.split('-')[2])
+      m[day] = (m[day] || 0) + t.valor
+    })
+    return m
+  }, [transacoes])
+
+  function heatDayColor(dia) {
+    const spent  = spendingByDay[dia] || 0
+    const earned = incomeByDay[dia]   || 0
+    if (!spent && !earned) return { bg: 'rgba(0,0,0,0.03)', text: T.textMut, fw: 400 }
+    if (spent) {
+      const ratio = spent / maxDaySpending
+      if (ratio >= 0.75) return { bg: 'rgba(255,116,0,0.85)',  text: '#fff',    fw: 700 }
+      if (ratio >= 0.45) return { bg: 'rgba(255,116,0,0.50)',  text: '#7a3800', fw: 600 }
+      if (ratio >= 0.15) return { bg: 'rgba(255,116,0,0.22)',  text: '#994400', fw: 500 }
+      return                    { bg: 'rgba(255,116,0,0.09)',  text: T.textSub, fw: 400 }
+    }
+    // só entrada, nenhuma saída
+    return { bg: 'rgba(0,182,173,0.28)', text: '#003333', fw: 600 }
+  }
+
   // ── Ações ──────────────────────────────────────────────────────────────────
 
   function navMes(dir) {
@@ -475,80 +516,14 @@ export default function Financas() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ minHeight: '100vh', background: T.bgGradient, fontFamily: T.fontBody }}>
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '28px 20px 60px' }}>
-
-        {/* ── Header ── */}
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={springFluid}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <button onClick={() => navigate('/dashboard')} style={{
-              background: 'rgba(255,255,255,0.45)', border: `1px solid ${T.glassBorder}`,
-              borderRadius: 8, width: 32, height: 32, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textSub, fontSize: 16,
-            }}>←</button>
-            <div>
-              <h1 style={{ fontFamily: T.fontHead, fontSize: 22, fontWeight: 800, color: T.ink, margin: 0, letterSpacing: '-0.03em' }}>
-                Financeiro
-              </h1>
-              <span style={{ fontFamily: T.fontBody, fontSize: 12, color: T.textMut, textTransform: 'capitalize' }}>{userId}</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* nav mês */}
-            <div style={{ ...thinGlass, padding: '6px 4px', display: 'flex', alignItems: 'center', gap: 0 }}>
-              <button onClick={() => navMes(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textSub, fontSize: 14, padding: '2px 8px' }}>‹</button>
-              <span style={{ fontFamily: T.fontBody, fontSize: 11, fontWeight: 600, color: T.text, minWidth: 90, textAlign: 'center' }}>
-                {MESES[mes - 1]} {ano}
-              </span>
-              <button onClick={() => navMes(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textSub, fontSize: 14, padding: '2px 8px' }}>›</button>
-            </div>
-            {/* filtro de datas livre */}
-            <div style={{ ...thinGlass, padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <input
-                type="date" value={filterStart}
-                onChange={e => setFilterStart(e.target.value)}
-                style={{ background: 'none', border: 'none', fontFamily: T.fontBody, fontSize: 11, color: T.text, outline: 'none', cursor: 'pointer' }}
-              />
-              <span style={{ color: T.textMut, fontSize: 11 }}>–</span>
-              <input
-                type="date" value={filterEnd}
-                onChange={e => setFilterEnd(e.target.value)}
-                style={{ background: 'none', border: 'none', fontFamily: T.fontBody, fontSize: 11, color: T.text, outline: 'none', cursor: 'pointer' }}
-              />
-            </div>
-
-            {/* engrenagem config */}
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={openConfig}
-              style={{
-                background: 'rgba(255,255,255,0.45)', border: `1px solid ${T.glassBorder}`,
-                borderRadius: 8, width: 34, height: 34, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: T.textSub, fontSize: 15,
-              }}
-              title="Configurações"
-            >⚙</motion.button>
-
-            {/* nova transação */}
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              onClick={() => setModalTransacao(true)}
-              style={{
-                background: T.teal, border: 'none', borderRadius: 9,
-                padding: '9px 15px', cursor: 'pointer', color: '#fff',
-                fontSize: 12, fontWeight: 700, fontFamily: T.fontBody,
-                letterSpacing: '0.02em', boxShadow: `0 4px 16px rgba(0,68,68,0.28)`,
-              }}
-            >+ Transação</motion.button>
-          </div>
-        </motion.div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      style={{ minHeight: '100vh', background: T.bgGradient, fontFamily: T.fontBody }}
+    >
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '20px 20px 60px' }}>
 
         {/* ── Hero ── */}
         <motion.div
@@ -592,6 +567,36 @@ export default function Financas() {
           </div>
         </motion.div>
 
+        {/* ── Controles de período ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+            <button onClick={() => navMes(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textSub, fontSize: 16, padding: '2px 6px', flexShrink: 0 }}>‹</button>
+            <span style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 600, color: T.text, minWidth: 84, textAlign: 'center', flexShrink: 0 }}>
+              {MESES[mes - 1]} {ano}
+            </span>
+            <button onClick={() => navMes(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textSub, fontSize: 16, padding: '2px 6px', flexShrink: 0 }}>›</button>
+            <DateRangeSlider
+              filterStart={filterStart} filterEnd={filterEnd}
+              setFilterStart={setFilterStart} setFilterEnd={setFilterEnd}
+              accentColor={T.teal} fontBody={T.fontBody}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <motion.button whileTap={{ scale: 0.92 }} onClick={openConfig} title="Configurações" style={{
+              background: 'none', border: `1px solid ${T.inkLt}`,
+              borderRadius: 7, width: 30, height: 30, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: T.textSub, fontSize: 14,
+            }}>⚙</motion.button>
+            <motion.button whileTap={{ scale: 0.96 }} onClick={() => setModalTransacao(true)} style={{
+              background: T.teal, border: 'none', borderRadius: 7,
+              padding: '7px 14px', cursor: 'pointer', color: '#fff',
+              fontSize: 11, fontWeight: 700, fontFamily: T.fontBody,
+              letterSpacing: '0.02em',
+            }}>+ Transação</motion.button>
+          </div>
+        </div>
+
         {/* ── 3 colunas ── */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 2.4fr 1.6fr', gap: 14 }}>
 
@@ -600,6 +605,7 @@ export default function Financas() {
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -3 }}
               transition={{ ...springFluid, delay: 0.09 }}
               style={card}
             >
@@ -638,6 +644,7 @@ export default function Financas() {
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -3 }}
               transition={{ ...springFluid, delay: 0.11 }}
               style={card}
             >
@@ -681,6 +688,7 @@ export default function Financas() {
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -3 }}
               transition={{ ...springFluid, delay: 0.13 }}
               style={card}
             >
@@ -704,50 +712,117 @@ export default function Financas() {
             </motion.div>
           </div>
 
-          {/* col 3: transações (estreita) */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...springFluid, delay: 0.15 }}
-            style={{ ...card, padding: '16px 14px', overflowY: 'auto', maxHeight: 440 }}
-          >
-            <span style={sectionLabel}>Transações</span>
-            {loading
-              ? <p style={{ color: T.textMut, fontSize: 12, fontFamily: T.fontBody }}>Carregando…</p>
-              : transacoesRecentes.length === 0
-                ? <p style={{ color: T.textMut, fontSize: 12, fontFamily: T.fontBody }}>Nenhuma transação.</p>
-                : transacoesRecentes.map((t, i) => {
-                    const vs = getValorStyle(t.tipo, t.valor)
-                    return (
-                      <motion.div
-                        key={t.id}
-                        initial={{ opacity: 0, x: 8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ ...springSnappy, delay: i * 0.02 }}
-                        style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid rgba(0,0,0,0.05)' }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
-                          <div style={{ minWidth: 0 }}>
-                            <span style={{ fontFamily: T.fontBody, fontSize: 11, color: T.textSub, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {t.descricao || CATEGORIAS_LABEL[t.categoria] || t.categoria}
+          {/* col 3: calendário heatmap + transações */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* Calendário heatmap */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -3 }}
+              transition={{ ...springFluid, delay: 0.15 }}
+              style={card}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ ...sectionLabel, margin: 0 }}>Gastos por dia</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                  <button onClick={() => navMes(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textSub, fontSize: 14, padding: '2px 6px' }}>‹</button>
+                  <span style={{ fontFamily: T.fontBody, fontSize: 10, fontWeight: 600, color: T.text }}>{MESES[mes - 1].slice(0,3)}</span>
+                  <button onClick={() => navMes(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textSub, fontSize: 14, padding: '2px 6px' }}>›</button>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+                {['D','S','T','Q','Q','S','S'].map((d, i) => (
+                  <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 600, color: T.textMut, paddingBottom: 4, fontFamily: T.fontBody }}>{d}</div>
+                ))}
+                {Array.from({ length: primeiroDiaSemana }).map((_, i) => <div key={`v${i}`} />)}
+                {Array.from({ length: totalDiasMes }).map((_, i) => {
+                  const dia     = i + 1
+                  const dataStr = `${ano}-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`
+                  const isFuturo = dataStr > hojeStr
+                  const isHoje   = dataStr === hojeStr
+                  const { bg, text, fw } = heatDayColor(dia)
+                  const dayTrans = transacoes.filter(t => t.data === dataStr)
+                  return (
+                    <motion.button
+                      key={dia}
+                      whileHover={isFuturo ? {} : { scale: 1.2 }}
+                      whileTap={isFuturo ? {} : { scale: 0.92 }}
+                      transition={springSnappy}
+                      onClick={() => !isFuturo && setDayDetail({ data: dataStr, transacoes: dayTrans })}
+                      title={spendingByDay[dia] ? fmt(spendingByDay[dia]) : undefined}
+                      style={{
+                        textAlign: 'center', padding: '5px 0', borderRadius: 5,
+                        fontSize: 10, backgroundColor: isFuturo ? 'transparent' : bg,
+                        color: isFuturo ? T.inkLt : text, fontWeight: fw,
+                        fontFamily: T.fontBody, border: 'none',
+                        outline: isHoje ? `2px solid ${T.tealVibrant}` : 'none', outlineOffset: 1,
+                        cursor: isFuturo ? 'default' : 'pointer', opacity: isFuturo ? 0.3 : 1,
+                      }}
+                    >{dia}</motion.button>
+                  )
+                })}
+              </div>
+
+              {/* Legenda */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 10, fontSize: 10, fontFamily: T.fontBody, alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ color: T.textMut }}>sem mov.</span>
+                <span style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(0,182,173,0.28)', display: 'inline-block' }} />
+                <span style={{ color: T.alertGood }}>entrada</span>
+                <span style={{ color: T.textMut, margin: '0 2px' }}>·</span>
+                {['rgba(255,116,0,0.09)','rgba(255,116,0,0.22)','rgba(255,116,0,0.50)','rgba(255,116,0,0.85)'].map((bg, i) => (
+                  <span key={i} style={{ width: 12, height: 12, borderRadius: 3, background: bg, display: 'inline-block' }} />
+                ))}
+                <span style={{ color: T.orange }}>saída</span>
+              </div>
+            </motion.div>
+
+            {/* Transações recentes */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -3 }}
+              transition={{ ...springFluid, delay: 0.17 }}
+              style={{ ...card, padding: '16px 14px', overflowY: 'auto', maxHeight: 340 }}
+            >
+              <span style={sectionLabel}>Transações</span>
+              {loading
+                ? <p style={{ color: T.textMut, fontSize: 12, fontFamily: T.fontBody }}>Carregando…</p>
+                : transacoesRecentes.length === 0
+                  ? <p style={{ color: T.textMut, fontSize: 12, fontFamily: T.fontBody }}>Nenhuma transação.</p>
+                  : transacoesRecentes.map((t, i) => {
+                      const vs = getValorStyle(t.tipo, t.valor)
+                      return (
+                        <motion.div
+                          key={t.id}
+                          initial={{ opacity: 0, x: 8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ ...springSnappy, delay: i * 0.02 }}
+                          style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid rgba(0,0,0,0.05)' }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                            <div style={{ minWidth: 0 }}>
+                              <span style={{ fontFamily: T.fontBody, fontSize: 11, color: T.textSub, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {t.descricao || CATEGORIAS_LABEL[t.categoria] || t.categoria}
+                              </span>
+                              <span style={{ fontFamily: T.fontBody, fontSize: 10, color: T.textMut }}>{t.data}</span>
+                            </div>
+                            <span style={{
+                              fontFamily: T.fontHead, fontSize: 11, fontWeight: 700,
+                              whiteSpace: 'nowrap', flexShrink: 0,
+                              padding: '2px 7px', borderRadius: 5,
+                              background: vs.bg, border: `1px solid ${vs.border}`, color: vs.text,
+                            }}>
+                              {t.tipo === 'entrada' ? '+' : '-'}{fmt(t.valor)}
                             </span>
-                            <span style={{ fontFamily: T.fontBody, fontSize: 10, color: T.textMut }}>{t.data}</span>
                           </div>
-                          {/* tag de valor com cor */}
-                          <span style={{
-                            fontFamily: T.fontHead, fontSize: 11, fontWeight: 700,
-                            whiteSpace: 'nowrap', flexShrink: 0,
-                            padding: '2px 7px', borderRadius: 5,
-                            background: vs.bg, border: `1px solid ${vs.border}`, color: vs.text,
-                          }}>
-                            {t.tipo === 'entrada' ? '+' : '-'}{fmt(t.valor)}
-                          </span>
-                        </div>
-                      </motion.div>
-                    )
-                  })
-            }
-          </motion.div>
+                        </motion.div>
+                      )
+                    })
+              }
+            </motion.div>
+          </div>
         </div>
       </div>
 
@@ -891,6 +966,6 @@ export default function Financas() {
           </Modal>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   )
 }

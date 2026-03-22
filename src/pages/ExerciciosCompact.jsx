@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import DateRangeSlider from '../components/DateRangeSlider'
 import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -11,11 +11,7 @@ import api from '../services/api'
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const CATEGORIAS   = ['costas', 'triceps', 'biceps', 'perna', 'peito', 'ombro', 'cardio', 'full_body', 'outro']
-const QUALIDADES   = [
-  { value: 'abaixo_esperado', label: 'Abaixo do esperado' },
-  { value: 'medio',           label: 'Médio'              },
-  { value: 'acima_esperado',  label: 'Acima do esperado'  },
-]
+
 const Q_SCORE      = { acima_esperado: 3, medio: 2, abaixo_esperado: 1 }
 const MESES        = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                       'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
@@ -25,7 +21,7 @@ const NOME_SEMANA  = { 0:'Dom', 1:'Seg', 2:'Ter', 3:'Qua', 4:'Qui', 5:'Sex', 6:'
 // ─── Tokens ───────────────────────────────────────────────────────────────────
 
 const T = {
-  bgGradient:  'linear-gradient(135deg, #d4d4d4 0%, #e8e8e8 40%, #f4f4f4 70%, #ffffff 100%)',
+  bgGradient:  '#ffffff',
   glass:       'rgba(255,255,255,0.55)',
   glassBorder: 'rgba(255,255,255,0.90)',
   blur:        'blur(28px) saturate(200%)',
@@ -83,14 +79,6 @@ const sectionLabel = {
   letterSpacing: '0.1em', marginBottom: 12, display: 'block',
 }
 const heroLabel  = { ...sectionLabel, color: 'rgba(255,255,255,0.35)', marginBottom: 8 }
-const fieldLabel = { fontFamily: T.fontBody, fontSize: 12, fontWeight: 500, color: T.textSub, display: 'block', marginBottom: 5 }
-const inputStyle = {
-  width: '100%', padding: '8px 11px', boxSizing: 'border-box',
-  borderRadius: 7, border: '1px solid rgba(255,255,255,0.65)',
-  background: 'rgba(255,255,255,0.45)', backdropFilter: 'blur(8px)',
-  WebkitBackdropFilter: 'blur(8px)', color: T.text,
-  fontSize: 13, fontFamily: T.fontBody, outline: 'none',
-}
 
 // ─── Framer Motion configs ────────────────────────────────────────────────────
 
@@ -145,26 +133,6 @@ function ConsistenciaTooltip({ active, payload, label: lbl }) {
       <p style={{ margin: '0 0 4px', color: T.textMut, fontSize: 11 }}>{lbl}</p>
       <p style={{ margin: '2px 0', color: T.ink, fontWeight: 700 }}>{p.value}% consistência</p>
       <p style={{ margin: '2px 0', color: T.textMut, fontSize: 11 }}>{p.payload.treinados} de {p.payload.diasUteis} dias úteis</p>
-    </div>
-  )
-}
-
-function HeroTooltip({ active, payload, label: lbl }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div style={{
-      background: 'rgba(15,15,15,0.96)', backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)',
-      borderRadius: 10, padding: '8px 12px', fontSize: 12,
-      fontFamily: T.fontBody, color: '#fff', boxShadow: '0 4px 20px rgba(0,0,0,0.40)',
-    }}>
-      <p style={{ margin: '0 0 4px', color: 'rgba(255,255,255,0.35)', fontSize: 11 }}>{lbl}</p>
-      {payload.map((p, i) => (
-        <p key={i} style={{ margin: '2px 0', color: '#fff' }}>
-          <span style={{ color: p.color || '#fff', marginRight: 4 }}>■</span>
-          {p.name}: <strong>{p.value}</strong>
-        </p>
-      ))}
     </div>
   )
 }
@@ -310,9 +278,8 @@ function DayDetailModal({ dayDetail, onClose }) {
 
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
-function Exercicios() {
-  const navigate = useNavigate()
-  const userId   = localStorage.getItem('user_id')
+function ExerciciosCompact() {
+  const userId    = localStorage.getItem('user_id')
   const hoje     = new Date()
   const anoAtual = hoje.getFullYear()
   const mesAtual = hoje.getMonth()
@@ -321,18 +288,16 @@ function Exercicios() {
 
   const [treinos,       setTreinos]       = useState([])
   const [pesoHistorico, setPesoHistorico] = useState([])
-  const [diasRange,     setDiasRange]     = useState(30)
-  const [distAberta,    setDistAberta]    = useState(false)
+  const [mes,           setMes]           = useState(hoje.getMonth() + 1)
+  const [ano,           setAno]           = useState(hoje.getFullYear())
+  const [filterStart,   setFilterStart]   = useState(`${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-01`)
+  const [filterEnd,     setFilterEnd]     = useState(hoje.toISOString().split('T')[0])
   const [expanded,      setExpanded]      = useState(null)
   const [dayDetail,     setDayDetail]     = useState(null)
   const [hoveredCat,    setHoveredCat]    = useState(null)
   const [calMes,        setCalMes]        = useState(hoje.getMonth())
   const [calAno,        setCalAno]        = useState(hoje.getFullYear())
-  const [loading,       setLoading]       = useState(false)
   const [erro,          setErro]          = useState('')
-  const [form,          setForm]          = useState({
-    data: hojeStr, categoria: 'costas', qualidade: 'medio', calorias_gastas: '', observacoes: '',
-  })
 
   useEffect(() => { carregarDados() }, [])
 
@@ -349,12 +314,17 @@ function Exercicios() {
     }
   }
 
-  const limiteStr = useMemo(() => {
-    const d = new Date(); d.setDate(d.getDate() - diasRange)
-    return d.toISOString().split('T')[0]
-  }, [diasRange])
+  const limiteStr = filterStart
 
-  const filteredTreinos = useMemo(() => treinos.filter(t => t.data >= limiteStr), [treinos, limiteStr])
+  // quando muda mes/ano via nav, sincroniza o filtro de datas
+  useEffect(() => {
+    setFilterStart(`${ano}-${String(mes).padStart(2,'0')}-01`)
+    setFilterEnd(new Date(ano, mes, 0).toISOString().split('T')[0])
+  }, [mes, ano])
+
+  const filteredTreinos = useMemo(() =>
+    treinos.filter(t => t.data >= filterStart && t.data <= filterEnd),
+  [treinos, filterStart, filterEnd])
 
   // Dias únicos treinados no período (o número que importa)
   const diasTreinados = useMemo(() =>
@@ -363,9 +333,10 @@ function Exercicios() {
   )
 
   const filteredPeso = useMemo(() =>
-    pesoHistorico.filter(p => p.semana_inicio >= limiteStr)
+    pesoHistorico
+      .filter(p => p.semana_inicio >= filterStart && p.semana_inicio <= filterEnd)
       .map(p => ({ data: p.semana_inicio.slice(5), peso: p.peso_kg })),
-    [pesoHistorico, limiteStr]
+    [pesoHistorico, filterStart, filterEnd]
   )
 
   const diasOnSet = useMemo(() => new Set(treinos.map(t => t.data)), [treinos])
@@ -429,7 +400,7 @@ function Exercicios() {
   // Consistência: dias únicos de treino em dias úteis / total de dias úteis
   const consistencia = useMemo(() => {
     const inicio = new Date(limiteStr + 'T12:00:00')
-    const fim    = new Date()
+    const fim    = new Date(filterEnd + 'T23:59:59')
     let totalDias = 0, diasUteis = 0
     const d = new Date(inicio)
     while (d <= fim) {
@@ -444,7 +415,7 @@ function Exercicios() {
     )
     const treinados = weekdayDates.size
     return { totalDias, diasUteis, treinados, pct: diasUteis > 0 ? Math.round((treinados / diasUteis) * 100) : 0 }
-  }, [filteredTreinos, limiteStr])
+  }, [filteredTreinos, limiteStr, filterEnd])
 
   // Evolução da consistência acumulada — a cada dia útil, qual era o % geral até aquele ponto
   const consistenciaEvolution = useMemo(() => {
@@ -454,7 +425,7 @@ function Exercicios() {
         .map(t => t.data)
     )
     const inicio = new Date(limiteStr + 'T12:00:00')
-    const fim    = new Date()
+    const fim    = new Date(filterEnd + 'T23:59:59')
     const points = []
     let totalUteis = 0, treinados = 0
     const d = new Date(inicio)
@@ -481,7 +452,7 @@ function Exercicios() {
       return points.filter((_, i) => i % step === 0 || i === points.length - 1)
     }
     return points
-  }, [filteredTreinos, limiteStr])
+  }, [filteredTreinos, limiteStr, filterEnd])
 
   // Streak — dias consecutivos treinados
   const streak = useMemo(() => {
@@ -506,22 +477,12 @@ function Exercicios() {
     return mapa
   }, [treinos])
 
-  async function handleSubmit(e) {
-    e.preventDefault(); setLoading(true); setErro('')
-    try {
-      await api.post('/exercicio/treino', {
-        user_id: userId, data: form.data, categoria: form.categoria,
-        qualidade: form.qualidade,
-        calorias_gastas: form.calorias_gastas ? parseFloat(form.calorias_gastas) : null,
-        observacoes: form.observacoes || null,
-      })
-      await carregarDados()
-      setForm({ ...form, calorias_gastas: '', observacoes: '' })
-    } catch { setErro('Erro ao salvar treino.') }
-    setLoading(false)
+  function navMesFilter(dir) {
+    let nm = mes + dir, na = ano
+    if (nm < 1)  { nm = 12; na-- }
+    if (nm > 12) { nm = 1;  na++ }
+    setMes(nm); setAno(na)
   }
-
-  function logout() { localStorage.removeItem('user_id'); navigate('/login') }
 
   function navMes(dir) {
     setCalMes(prev => {
@@ -557,42 +518,22 @@ function Exercicios() {
   }
 
   return (
-    <div style={{ fontFamily: T.fontBody, background: T.bgGradient, minHeight: '100vh' }}>
-
-      {/* Topbar */}
-      <div style={{
-        background: 'rgba(255,255,255,0.58)', backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(255,255,255,0.80)',
-        padding: '0 20px', height: 52, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', position: 'sticky', top: 0, zIndex: 10,
-      }}>
-        <div style={{ maxWidth: 1000, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span style={{ fontFamily: T.fontHead, fontSize: 15, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>vida</span>
-            <span style={{ color: T.inkLt }}>·</span>
-            <span style={{ fontSize: 13, fontWeight: 500, color: T.textSub }}>Exercícios</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ fontSize: 13, color: T.textSub }}>{userId?.charAt(0).toUpperCase() + userId?.slice(1)}</span>
-            <button onClick={logout} style={{
-              fontSize: 12, padding: '5px 12px', cursor: 'pointer', borderRadius: 6,
-              border: `1px solid ${T.inkLt}`, backgroundColor: 'transparent',
-              color: T.textSub, fontFamily: T.fontBody, fontWeight: 500,
-            }}>Sair</button>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      style={{ fontFamily: T.fontBody, background: T.bgGradient, minHeight: '100vh' }}
+    >
       <motion.div
         animate={{
           scale: anyModalOpen ? 0.984 : 1,
           filter: anyModalOpen ? 'blur(2px)' : 'blur(0px)',
         }}
         transition={springFluid}
-        style={{ padding: '20px', transformOrigin: 'center top' }}
+        style={{ transformOrigin: 'center top' }}
       >
-        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '20px 20px 60px' }}>
         {erro && (
           <div style={{
             background: 'rgba(254,226,226,0.75)', backdropFilter: 'blur(8px)',
@@ -602,45 +543,102 @@ function Exercicios() {
           }}>{erro}</div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr 1fr', gap: 14, alignItems: 'start' }}>
+        {/* ── Hero — Consistência ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springFluid, delay: 0.05 }}
+          style={{ ...heroCard, marginBottom: 14 }}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr 1.2fr', gap: 28, alignItems: 'start' }}>
 
-          {/* ══ ESQUERDA — ordem: Consistência → Peso → Grupos ══ */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-            {/* 1. Consistência no período */}
-            <motion.div layout whileHover={{ y: -3 }} transition={springSnappy} style={{ ...thinGlass, padding: '16px 20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ ...sectionLabel, marginBottom: 0 }}>Consistência no período</span>
-                <ExpandBtn onClick={() => setExpanded('consistencia')} />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
-                <span style={{ fontFamily: T.fontHead, fontSize: 36, fontWeight: 800, color: T.ink, lineHeight: 1, letterSpacing: '-0.03em' }}>
-                  {consistencia.pct}%
-                </span>
-                <span style={{ fontSize: 11, color: T.textMut, fontFamily: T.fontBody }}>dias úteis</span>
-              </div>
-              <div style={{ height: 5, backgroundColor: T.inkLt, borderRadius: 3, overflow: 'hidden', marginBottom: 10 }}>
+            {/* KPI principal: consistência */}
+            <div>
+              <span style={heroLabel}>Consistência no período</span>
+              <p style={{ fontFamily: T.fontHead, fontSize: 32, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.04em' }}>
+                {consistencia.pct}%
+              </p>
+              <div style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 2, overflow: 'hidden', marginTop: 12 }}>
                 <motion.div
                   animate={{ width: `${consistencia.pct}%` }}
                   transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-                  style={{ height: '100%', borderRadius: 3, backgroundColor: T.ink }}
+                  style={{ height: '100%', borderRadius: 2, backgroundColor: '#fff' }}
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+            </div>
+
+            {/* Cascata: total → úteis → treinados */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <span style={heroLabel}>Período</span>
+              {[
+                { label: 'dias totais',    value: consistencia.totalDias,  opacity: 1,    indent: 0  },
+                { label: 'dias úteis',     value: consistencia.diasUteis,  opacity: 0.75, indent: 14 },
+                { label: 'dias treinados', value: diasTreinados,           opacity: 1,    indent: 28, highlight: true },
+              ].map(({ label, value, opacity, indent, highlight }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 6, paddingLeft: indent }}>
+                  {indent > 0 && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginLeft: -10 }}>↳</span>}
+                  <span style={{ fontFamily: T.fontHead, fontSize: highlight ? 20 : 16, fontWeight: 800, color: `rgba(255,255,255,${opacity})`, letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</span>
+                  <span style={{ fontFamily: T.fontBody, fontSize: 10, color: 'rgba(255,255,255,0.30)' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Qualidade com barra */}
+            <div>
+              <span style={heroLabel}>Qualidade</span>
+              <div style={{ display: 'flex', gap: 16, marginBottom: 10 }}>
                 {[
-                  { label: 'dias no período', value: consistencia.totalDias },
-                  { label: 'dias úteis',      value: consistencia.diasUteis },
-                  { label: 'dias treinados',  value: diasTreinados },
-                ].map(({ label, value }) => (
-                  <div key={label} style={{ background: 'rgba(0,0,0,0.04)', borderRadius: 8, padding: '7px 8px', textAlign: 'center' }}>
-                    <div style={{ fontFamily: T.fontHead, fontSize: 16, fontWeight: 800, color: T.ink, lineHeight: 1 }}>{value}</div>
-                    <div style={{ fontSize: 9, color: T.textMut, fontFamily: T.fontBody, marginTop: 3, lineHeight: 1.2 }}>{label}</div>
+                  { pct: qualPerc.acima_esperado,  cor: T.qGreen,  label: 'acima' },
+                  { pct: qualPerc.medio,            cor: T.qYellow, label: 'médio' },
+                  { pct: qualPerc.abaixo_esperado,  cor: T.qRed,    label: 'abaixo' },
+                ].map(({ pct, cor, label }) => (
+                  <div key={label} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: cor, fontFamily: T.fontBody }}>{pct}%</div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', fontFamily: T.fontBody, marginTop: 2 }}>{label}</div>
                   </div>
                 ))}
               </div>
-            </motion.div>
+              <div style={{ borderRadius: 4, overflow: 'hidden', height: 5, display: 'flex', backgroundColor: 'rgba(255,255,255,0.10)' }}>
+                {qualPerc.acima_esperado  > 0 && <motion.div animate={{ width: `${qualPerc.acima_esperado}%`  }} transition={springFluid} style={{ height: '100%', backgroundColor: T.qGreen  }} />}
+                {qualPerc.medio           > 0 && <motion.div animate={{ width: `${qualPerc.medio}%`           }} transition={springFluid} style={{ height: '100%', backgroundColor: T.qYellow }} />}
+                {qualPerc.abaixo_esperado > 0 && <motion.div animate={{ width: `${qualPerc.abaixo_esperado}%` }} transition={springFluid} style={{ height: '100%', backgroundColor: T.qRed    }} />}
+              </div>
+            </div>
+          </div>
+        </motion.div>
 
-            {/* 2. Progressão de peso */}
+        {/* ── Controles de período ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+            <button onClick={() => navMesFilter(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textSub, fontSize: 16, padding: '2px 6px', flexShrink: 0 }}>‹</button>
+            <span style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 600, color: T.text, minWidth: 84, textAlign: 'center', flexShrink: 0 }}>
+              {MESES[mes - 1]} {ano}
+            </span>
+            <button onClick={() => navMesFilter(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textSub, fontSize: 16, padding: '2px 6px', flexShrink: 0 }}>›</button>
+            <DateRangeSlider
+              filterStart={filterStart} filterEnd={filterEnd}
+              setFilterStart={setFilterStart} setFilterEnd={setFilterEnd}
+              accentColor={T.ink} fontBody={T.fontBody}
+            />
+          </div>
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            onClick={() => {}}
+            style={{
+              background: T.ink, border: 'none', borderRadius: 7,
+              padding: '7px 14px', cursor: 'pointer', color: '#fff',
+              fontSize: 11, fontWeight: 700, fontFamily: T.fontBody,
+              letterSpacing: '0.02em', flexShrink: 0,
+            }}
+          >+ Mais um treino</motion.button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr 1fr', gap: 14, alignItems: 'start' }}>
+
+          {/* ══ ESQUERDA ══ */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* 1. Progressão de peso */}
             <motion.div layout whileHover={{ y: -3 }} transition={springSnappy} style={card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <span style={{ ...sectionLabel, margin: 0 }}>Progressão de peso</span>
@@ -749,97 +747,26 @@ function Exercicios() {
           {/* ══ MEIO ══ */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-            {/* Período de análise */}
-            <motion.div layout whileHover={{ y: -3 }} transition={springSnappy} style={{ ...thinGlass, padding: '14px 20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ ...sectionLabel, margin: 0 }}>Período de análise</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: T.ink, fontFamily: T.fontBody }}>{diasRange} dias</span>
+            {/* Distribuição semanal */}
+            <motion.div layout whileHover={{ y: -3 }} transition={springSnappy} style={thinGlass}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ ...sectionLabel, margin: 0 }}>Distribuição semanal</span>
+                <ExpandBtn onClick={() => setExpanded('distribuicao')} />
               </div>
-              <input type="range" min={7} max={180} value={diasRange}
-                onChange={e => setDiasRange(Number(e.target.value))}
-                style={{ width: '100%', cursor: 'pointer', accentColor: T.ink, height: 3 }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.textMut, marginTop: 5, fontFamily: T.fontBody }}>
-                <span>7 dias</span><span>180 dias</span>
-              </div>
-            </motion.div>
-
-            {/* HERO — Dias treinados no período */}
-            <motion.div layout transition={springFluid} style={heroCard}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
-                <div>
-                  <span style={heroLabel}>Dias treinados no período</span>
-                  <span style={{ fontFamily: T.fontHead, fontSize: 52, fontWeight: 800, color: '#fff', lineHeight: 1, letterSpacing: '-0.04em' }}>
-                    {diasTreinados}
-                  </span>
-                </div>
-                <div style={{ textAlign: 'right', paddingBottom: 4 }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: T.fontBody, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>qualidade</div>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    {[
-                      { pct: qualPerc.acima_esperado, cor: T.qGreen,  label: 'acima' },
-                      { pct: qualPerc.medio,           cor: T.qYellow, label: 'médio' },
-                      { pct: qualPerc.abaixo_esperado, cor: T.qRed,    label: 'abaixo' },
-                    ].map(({ pct, cor, label }) => (
-                      <div key={label} style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: cor, fontFamily: T.fontBody }}>{pct}%</div>
-                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontFamily: T.fontBody, marginTop: 1 }}>{label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ borderRadius: 6, overflow: 'hidden', height: 7, display: 'flex', backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 18 }}>
-                {qualPerc.acima_esperado  > 0 && <motion.div animate={{ width: `${qualPerc.acima_esperado}%`  }} transition={springFluid} style={{ height: '100%', backgroundColor: T.qGreen  }} />}
-                {qualPerc.medio           > 0 && <motion.div animate={{ width: `${qualPerc.medio}%`           }} transition={springFluid} style={{ height: '100%', backgroundColor: T.qYellow }} />}
-                {qualPerc.abaixo_esperado > 0 && <motion.div animate={{ width: `${qualPerc.abaixo_esperado}%` }} transition={springFluid} style={{ height: '100%', backgroundColor: T.qRed    }} />}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button onClick={() => setDistAberta(v => !v)} style={{
-                  display: 'flex', alignItems: 'center', gap: 6, flex: 1,
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
-                  borderRadius: 8, padding: '8px 12px', cursor: 'pointer',
-                  fontFamily: T.fontBody, fontSize: 11, fontWeight: 600,
-                  color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em',
-                }}>
-                  <motion.span animate={{ rotate: distAberta ? 90 : 0 }} transition={springSnappy} style={{ fontSize: 10, display: 'inline-block' }}>▶</motion.span>
-                  Distribuição semanal
-                </button>
-                {distAberta && (
-                  <button onClick={() => setExpanded('distribuicao')} title="Expandir" style={{
-                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-                    borderRadius: 6, width: 28, height: 28, cursor: 'pointer', marginLeft: 8,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'rgba(255,255,255,0.45)', fontSize: 12, flexShrink: 0,
-                  }}>⤢</button>
-                )}
-              </div>
-
-              <AnimatePresence>
-                {distAberta && (
-                  <motion.div
-                    key="dist-chart"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 196, opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={springFluid}
-                    style={{ overflow: 'hidden', marginTop: 16 }}
-                  >
-                    <ResponsiveContainer width="100%" height={180}>
-                      <BarChart data={diaSemanaData} margin={{ top: 4, right: 0, left: -28, bottom: 0 }} barSize={16}>
-                        <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.08)" vertical={false} />
-                        <XAxis dataKey="dia" tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.35)', fontFamily: T.fontBody }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.35)', fontFamily: T.fontBody }} axisLine={false} tickLine={false} allowDecimals={false} />
-                        <Tooltip content={<HeroTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-                        <Bar dataKey="acima_esperado"  stackId="a" fill={T.qGreen}  name="Acima" />
-                        <Bar dataKey="medio"           stackId="a" fill={T.qYellow} name="Médio" />
-                        <Bar dataKey="abaixo_esperado" stackId="a" fill={T.qRed}    name="Abaixo" radius={[4,4,0,0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {diaSemanaData.every(d => d.acima_esperado + d.medio + d.abaixo_esperado === 0)
+                ? <p style={{ fontSize: 13, color: T.textMut, textAlign: 'center', padding: '28px 0', margin: 0 }}>Nenhum dado no período.</p>
+                : <ResponsiveContainer width="100%" height={175}>
+                    <BarChart data={diaSemanaData} margin={{ top: 4, right: 8, left: -22, bottom: 0 }} barSize={14}>
+                      <CartesianGrid strokeDasharray="2 4" stroke={T.inkLt} vertical={false} />
+                      <XAxis dataKey="dia" tick={{ fontSize: 10, fill: T.textMut, fontFamily: T.fontBody }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: T.textMut, fontFamily: T.fontBody }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip content={<CleanTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                      <Bar dataKey="acima_esperado"  stackId="a" fill={T.qGreen}  name="Acima" />
+                      <Bar dataKey="medio"           stackId="a" fill={T.qYellow} name="Médio" />
+                      <Bar dataKey="abaixo_esperado" stackId="a" fill={T.qRed}    name="Abaixo" radius={[4,4,0,0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+              }
             </motion.div>
 
             {/* Calorias por treino */}
@@ -951,53 +878,6 @@ function Exercicios() {
               </motion.div>
             </div>
 
-            {/* Formulário */}
-            <div style={card}>
-              <span style={sectionLabel}>Novo registro</span>
-              <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: 11 }}>
-                  <label style={fieldLabel}>Data</label>
-                  <input type="date" value={form.data} required
-                    onChange={e => setForm({ ...form, data: e.target.value })} style={inputStyle} />
-                </div>
-                <div style={{ marginBottom: 11 }}>
-                  <label style={fieldLabel}>Categoria</label>
-                  <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })} style={inputStyle}>
-                    {CATEGORIAS.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
-                  </select>
-                </div>
-                <div style={{ marginBottom: 11 }}>
-                  <label style={fieldLabel}>Qualidade</label>
-                  <select value={form.qualidade} onChange={e => setForm({ ...form, qualidade: e.target.value })} style={inputStyle}>
-                    {QUALIDADES.map(q => <option key={q.value} value={q.value}>{q.label}</option>)}
-                  </select>
-                </div>
-                <div style={{ marginBottom: 11 }}>
-                  <label style={fieldLabel}>Calorias <span style={{ color: T.textMut, fontWeight: 400 }}>(opcional)</span></label>
-                  <input type="number" min="0" value={form.calorias_gastas} placeholder="ex: 450"
-                    onChange={e => setForm({ ...form, calorias_gastas: e.target.value })} style={inputStyle} />
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={fieldLabel}>Observações <span style={{ color: T.textMut, fontWeight: 400 }}>(opcional)</span></label>
-                  <input type="text" value={form.observacoes} placeholder="ex: senti dor no ombro"
-                    onChange={e => setForm({ ...form, observacoes: e.target.value })} style={inputStyle} />
-                </div>
-                {erro && <p style={{ color: '#dc2626', fontSize: 12, margin: '0 0 10px', fontFamily: T.fontBody }}>{erro}</p>}
-                <motion.button
-                  type="submit" disabled={loading}
-                  whileHover={loading ? {} : { scale: 1.01 }}
-                  whileTap={loading ? {} : { scale: 0.98 }}
-                  transition={springSnappy}
-                  style={{
-                    width: '100%', padding: '10px 0', cursor: loading ? 'not-allowed' : 'pointer',
-                    borderRadius: 8, border: 'none',
-                    backgroundColor: loading ? T.inkLt : T.ink,
-                    color: loading ? T.textMut : '#fff',
-                    fontSize: 13, fontWeight: 600, fontFamily: T.fontBody, letterSpacing: '0.01em',
-                  }}
-                >{loading ? 'Salvando...' : 'Salvar treino'}</motion.button>
-              </form>
-            </div>
           </div>
         </div>
         </div>
@@ -1098,7 +978,7 @@ function Exercicios() {
           <DayDetailModal key="day" dayDetail={dayDetail} onClose={() => setDayDetail(null)} />
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   )
 }
 
