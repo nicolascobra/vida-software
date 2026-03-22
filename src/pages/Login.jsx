@@ -19,7 +19,7 @@ function Login() {
     if (senhaCorreta && form.senha === senhaCorreta) {
       // Salva o usuário no navegador para saber quem está logado
       localStorage.setItem('user_id', form.usuario.toLowerCase())
-      navigate('/exercicios')
+      navigate('/dashboard')
     } else {
       setErro('Usuário ou senha incorretos')
     }
