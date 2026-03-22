@@ -1,19 +1,32 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import date, datetime
 
-class FinancasBase(BaseModel):
+
+class CentroCustoCreate(BaseModel):
     user_id: str
+    categoria: str
+    limite_mensal: float
+
+
+class CentroCustoResponse(CentroCustoCreate):
+    id: int
+    criado_em: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class TransacaoCreate(BaseModel):
+    user_id: str
+    data: date
+    tipo: str  # entrada | saida
     valor: float
-    tipo: str
     categoria: str
     descricao: Optional[str] = None
 
-class FinancasCreate(FinancasBase):
-    pass
 
-class FinancasResponse(FinancasBase):
+class TransacaoResponse(TransacaoCreate):
     id: int
-    data_registro: datetime
+    criado_em: datetime
 
     model_config = {"from_attributes": True}

@@ -1,19 +1,32 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import date, datetime
 
-class ExercicioBase(BaseModel):
+
+class TreinoCreate(BaseModel):
     user_id: str
-    tipo_exercicio: str
-    duracao_minutos: int
-    intensidade: str
+    data: date
+    categoria: str  # costas | triceps | biceps | perna | peito | ombro | cardio | full_body | outro
+    qualidade: str  # abaixo_esperado | medio | acima_esperado
+    calorias_gastas: Optional[float] = None
     observacoes: Optional[str] = None
 
-class ExercicioCreate(ExercicioBase):
-    pass
 
-class ExercicioResponse(ExercicioBase):
+class TreinoResponse(TreinoCreate):
     id: int
-    data_registro: datetime
+    criado_em: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PesoSemanalCreate(BaseModel):
+    user_id: str
+    semana_inicio: date
+    peso_kg: float
+
+
+class PesoSemanalResponse(PesoSemanalCreate):
+    id: int
+    criado_em: datetime
 
     model_config = {"from_attributes": True}

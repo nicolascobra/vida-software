@@ -3,10 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
 from app.routes import exercicio, alimentacao, financas
-# Import models to ensure they are registered in Base.metadata
-from app.models import exercicio as model_exercicio
-from app.models import alimentacao as model_alimentacao
-from app.models import financas as model_financas
+
+# Registra todos os models antes de criar as tabelas
+from app.models import exercicio as model_exercicio      # Treino, PesoSemanal
+from app.models import alimentacao as model_alimentacao  # RefeicaoDiaria, ItemRefeicao
+from app.models import financas as model_financas        # CentroCusto, Transacao
 
 Base.metadata.create_all(bind=engine)
 
@@ -23,6 +24,7 @@ app.add_middleware(
 app.include_router(exercicio.router, prefix="/exercicio", tags=["Exercício"])
 app.include_router(alimentacao.router, prefix="/alimentacao", tags=["Alimentação"])
 app.include_router(financas.router, prefix="/financas", tags=["Finanças"])
+
 
 @app.get("/")
 def read_root():

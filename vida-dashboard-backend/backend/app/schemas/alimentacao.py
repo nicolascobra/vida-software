@@ -1,19 +1,35 @@
 from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
+from typing import Optional, List
+from datetime import date, datetime
 
-class AlimentacaoBase(BaseModel):
-    user_id: str
-    refeicao: str
-    descricao: str
-    calorias_estimadas: Optional[int] = None
-    observacoes: Optional[str] = None
 
-class AlimentacaoCreate(AlimentacaoBase):
-    pass
+class ItemRefeicaoCreate(BaseModel):
+    refeicao_diaria_id: int
+    tipo_refeicao: str  # cafe_da_manha | almoco | lanche | jantar | ceia
+    alimento: str
+    quantidade_g: float
+    calorias: float
+    proteinas_g: Optional[float] = None
+    carboidratos_g: Optional[float] = None
+    gorduras_g: Optional[float] = None
 
-class AlimentacaoResponse(AlimentacaoBase):
+
+class ItemRefeicaoResponse(ItemRefeicaoCreate):
     id: int
-    data_registro: datetime
+    criado_em: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class RefeicaoDiariaCreate(BaseModel):
+    user_id: str
+    data: date
+    desvio_plano: bool = False
+    observacoes_desvio: Optional[str] = None
+
+
+class RefeicaoDiariaResponse(RefeicaoDiariaCreate):
+    id: int
+    criado_em: datetime
 
     model_config = {"from_attributes": True}
