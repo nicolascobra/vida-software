@@ -42,11 +42,11 @@ export default function Exercicio() {
         calorias_gastas: calorias ? parseInt(calorias) : null,
         observacoes: observacoes || null
       });
-      setStatus('✅ Treino salvo!');
+      setStatus('Treino salvo!');
       setCalorias(''); setObservacoes('');
       setTimeout(() => setStatus(null), 3000);
     } catch (error) {
-      setStatus('❌ Erro ao salvar');
+      setStatus('Erro ao salvar');
     }
   };
 

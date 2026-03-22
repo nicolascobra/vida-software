@@ -40,18 +40,18 @@ export default function Financeiro() {
     if (!categoria) return alert("Selecione uma categoria");
     setStatus('loading');
     let numericValue = parseFloat(valor.replace(',', '.'));
-    if (isNaN(numericValue)) return setStatus('❌ Erro: Valor inválido');
+    if (isNaN(numericValue)) return setStatus(' Erro: Valor inválido');
 
     try {
       await registrarTransacao({
         user_id: userId, data, tipo, categoria, valor: numericValue,
         descricao: descricao || null, custo_fixo: custoFixo
       });
-      setStatus('✅ Registrado!');
+      setStatus('Registrado!');
       setValor(''); setDescricao(''); setCustoFixo(false);
       setTimeout(() => setStatus(null), 3000);
     } catch (error) {
-      setStatus('❌ Erro ao registrar');
+      setStatus(' Erro ao registrar');
     }
   };
 

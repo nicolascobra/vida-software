@@ -72,10 +72,10 @@ export default function Alimentacao() {
       });
 
       await Promise.all(itemsPayload.map(item => adicionarItem(refId, tipo, item)));
-      setStatus(prev => ({ ...prev, [tipo]: '✅ Salvo!' }));
+      setStatus(prev => ({ ...prev, [tipo]: 'Salvo!' }));
       setTimeout(() => { setStatus(prev => ({ ...prev, [tipo]: null })); setAberto(null); }, 2000);
     } catch (err) {
-      setStatus(prev => ({ ...prev, [tipo]: '❌ Erro' }));
+      setStatus(prev => ({ ...prev, [tipo]: 'Erro' }));
     }
   };
 
