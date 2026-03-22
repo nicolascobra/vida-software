@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { registrarTransacao } from '../services/api';
+import QRCodeScanner from '../components/QRCodeScanner';
 
 const T = {
   glass:       'rgba(255,255,255,0.55)',
@@ -34,6 +35,7 @@ export default function Financeiro() {
   const [descricao, setDescricao] = useState('');
   const [custoFixo, setCustoFixo] = useState(false);
   const [status, setStatus] = useState(null);
+  const [showScanner, setShowScanner] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,10 +64,14 @@ export default function Financeiro() {
         <h1 className="title">Financeiro</h1>
       </div>
 
-      {status && <div style={{ padding: 16, background: status.includes('Erro') ? 'rgba(220,38,38,0.1)' : 'rgba(34,197,94,0.1)', color: status.includes('Erro') ? '#dc2626' : '#16a34a', borderRadius: 10, marginBottom: 20, textAlign: 'center', fontFamily: T.fontBody, fontWeight: 600 }}>{status === 'loading' ? '⏳ Salvando...' : status}</div>}
+      {status && <div style={{ padding: 16, background: status.includes('Erro') || status.includes('❌') ? 'rgba(220,38,38,0.1)' : 'rgba(34,197,94,0.1)', color: status.includes('Erro') || status.includes('❌') ? '#dc2626' : '#16a34a', borderRadius: 10, marginBottom: 20, textAlign: 'center', fontFamily: T.fontBody, fontWeight: 600 }}>{status === 'loading' ? '⏳ Salvando...' : status}</div>}
 
       <form onSubmit={handleSubmit} style={{ background: T.glass, backdropFilter: T.blur, WebkitBackdropFilter: T.blur, border: `1px solid ${T.glassBorder}`, borderRadius: 14, padding: 20, boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
         
+        <button type="button" onClick={() => setShowScanner(true)} style={{ width: '100%', background: 'rgba(255,255,255,0.8)', color: T.ink, border: '1px solid rgba(0,0,0,0.1)', borderRadius: 10, padding: 16, fontFamily: T.fontBody, fontSize: 15, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <span style={{ fontSize: 20 }}>📷</span> Preencher com Nota Fiscal
+        </button>
+
         <label style={labelStyle}>Data</label>
         <input type="date" value={data} onChange={e => setData(e.target.value)} style={inputStyle} required />
 
@@ -98,6 +104,25 @@ export default function Financeiro() {
           Registrar {tipo === 'entrada' ? 'Entrada' : 'Saída'}
         </button>
       </form>
+
+      {showScanner && (
+        <QRCodeScanner 
+          onManualInput={() => setShowScanner(false)}
+          onScanSuccess={(data) => {
+            setShowScanner(false);
+            if (data.erro === "nao_disponivel") {
+              setStatus('❌ Não foi possível ler a nota. Preencha manualmente.');
+              setTimeout(() => setStatus(null), 4000);
+              return;
+            }
+            if (data.valor_total) setValor(data.valor_total.toString().replace('.', ','));
+            if (data.data) setData(data.data);
+            if (data.estabelecimento) setDescricao(data.estabelecimento);
+            setStatus('✅ Preenchido a partir da Nota!');
+            setTimeout(() => setStatus(null), 4000);
+          }}
+        />
+      )}
     </div>
   );
 }

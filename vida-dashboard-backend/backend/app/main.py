@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 
 from app.database import engine, Base
-from app.routes import exercicio, alimentacao, financas
+from app.routes import exercicio, alimentacao, financas, nota_fiscal
 
 # Registra todos os models antes de criar as tabelas
 from app.models import exercicio as model_exercicio      # Treino, PesoSemanal
@@ -28,6 +28,7 @@ app.add_middleware(
 app.include_router(exercicio.router, prefix="/exercicio", tags=["Exercício"])
 app.include_router(alimentacao.router, prefix="/alimentacao", tags=["Alimentação"])
 app.include_router(financas.router, prefix="/financas", tags=["Finanças"])
+app.include_router(nota_fiscal.router, prefix="/nota-fiscal", tags=["Nota Fiscal"])
 
 
 @app.get("/")
