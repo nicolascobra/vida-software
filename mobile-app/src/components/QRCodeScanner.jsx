@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { registrarTransacao } from '../services/api';
 
@@ -8,7 +8,8 @@ const T = {
   blur:        'blur(28px) saturate(200%)',
   ink:         '#0a0a0a',
   textSub:     '#525252',
-  fontBody:    "'DM Sans', sans-serif"
+  fontBody:    "'DM Sans', sans-serif",
+  fontHead:    "'Syne', sans-serif"
 };
 
 const categories = ['alimentacao', 'transporte', 'lazer', 'saude', 'moradia', 'investimento', 'salario'];
@@ -27,172 +28,70 @@ export default function QRCodeScanner({ onClose, onSaveSuccess }) {
     observacoes: ''
   });
 
-  const html5QrCodeRef = useRef(null);
-  const onScanSuccessRef = useRef(null);
+  const [debugData, setDebugData] = useState(null);
+  const [showDebug, setShowDebug] = useState(false);
+
+  const fileInputRef = useRef(null);
 
   const showToast = (msg) => {
     setToast(msg);
-    setTimeout(() => setToast(''), 3000);
+    setTimeout(() => setToast(''), 3500);
   };
 
-  useEffect(() => {
-    if (step === 'scanner') {
-      const qrCode = new Html5Qrcode("qr-reader");
-      html5QrCodeRef.current = qrCode;
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      const safelyResume = () => {
-        try {
-          if (qrCode.getState() === 2 || qrCode.getState() === 3) qrCode.resume();
-        } catch (e) {}
-      };
-
-      const stopScanner = async () => {
-        try {
-          await qrCode.stop();
-          qrCode.clear();
-        } catch (e) {
-          try { qrCode.clear(); } catch(e2) {}
-        }
-      };
-
-      const onScanSuccess = async (decodedText) => {
-        console.log("1. QR Code recebido:", decodedText);
-        try { qrCode.pause(true); } catch(e) {}
-        
-        const lowerText = decodedText.toLowerCase();
-        const isValid = ['sefaz', 'nfce', 'fazenda', 'qrcode'].some(k => lowerText.includes(k));
-        
-        if (!isValid) {
-          console.log("QR Code inválido (não contém termos da SEFAZ).");
-          showToast('QR Code inválido, tente novamente');
-          safelyResume();
-          return;
-        }
-
-        setLoading(true);
-        try {
-          console.log("2. Chamando POST /nota-fiscal/scan...");
-          const BASE_URL = import.meta.env.VITE_API_URL || "https://vida-software-backend.onrender.com";
-          const response = await fetch(`${BASE_URL}/nota-fiscal/scan`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ qrcode_url: decodedText })
-          });
-          
-          const data = await response.json();
-          console.log("3. Resposta recebida da API:", data);
-          setLoading(false);
-          
-          if (!data || data.erro === "nao_disponivel") {
-            console.log("Timeout ou Erro. Não disponível.");
-            showToast('Não foi possível ler a nota. Tente novamente.');
-            safelyResume();
-            return;
-          }
-          
-          console.log("4. Preenchendo dados de revisão...");
-          setReviewData({
-            estabelecimento: data.estabelecimento || '',
-            valor_total: data.valor_total ? data.valor_total.toString().replace('.', ',') : '',
-            data: data.data || new Date().toISOString().split('T')[0],
-            categoria: '',
-            observacoes: data.estabelecimento || ''
-          });
-          
-          console.log("5. Indo para estado de revisão...");
-          setStep('review');
-          
-          console.log("6. Parando a câmera...");
-          await stopScanner();
-          
-        } catch (err) {
-          console.error("Erro na requisição:", err);
-          setLoading(false);
-          showToast('Erro na conexão com API');
-          safelyResume();
-        }
-      };
-
-      onScanSuccessRef.current = onScanSuccess;
-
-      const startScanner = async () => {
-        try {
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          const videoDevices = devices.filter(d => d.kind === 'videoinput');
-          let selectedDevice = null;
-          
-          if (videoDevices.length > 0) {
-            const validCams = videoDevices.filter(d => {
-              const label = d.label.toLowerCase();
-              const isBack = label.includes('back') || label.includes('rear') || label.includes('0');
-              const isBad = label.includes('ultra') || label.includes('wide') || label.includes('0.5') || label.includes('depth');
-              return isBack && !isBad;
-            });
-            
-            if (validCams.length > 0) {
-              selectedDevice = validCams[0];
-            } else {
-              selectedDevice = videoDevices[videoDevices.length - 1];
-            }
-          }
-
-          const cameraConfig = selectedDevice 
-            ? { deviceId: { exact: selectedDevice.deviceId } } 
-            : { facingMode: "environment" };
-
-          await qrCode.start(
-            cameraConfig,
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            onScanSuccess,
-            (err) => { /* ignoring frame errors */ }
-          );
-        } catch (err) {
-          console.error("Erro ao iniciar câmera:", err);
-          showToast('Erro ao acessar a câmera. Verifique as permissões.');
-        }
-      };
-
-      startScanner();
-
-      return () => {
-        stopScanner();
-      };
-    }
-  }, [step]);
-
-  const forceFocus = () => {
-    if (html5QrCodeRef.current && typeof html5QrCodeRef.current.applyVideoConstraints === 'function') {
-      try {
-        html5QrCodeRef.current.applyVideoConstraints({ focusMode: "single-shot" });
-      } catch (e) {
-        console.error("Foco falhou:", e);
-      }
-    }
-  };
-
-  const manualCapture = () => {
-    const video = document.querySelector('#qr-reader video');
-    if (!video) return;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    setLoading(true);
     
-    ctx.drawImage(video, 0, 0);
-    canvas.toBlob(blob => {
-      const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
-      if (html5QrCodeRef.current) {
-        html5QrCodeRef.current.scanFile(file, true)
-          .then((decodedText) => {
-            if (onScanSuccessRef.current) onScanSuccessRef.current(decodedText);
-          })
-          .catch(() => {
-            showToast('Não foi possível ler a imagem capturada.');
-          });
+    try {
+      const html5QrCode = new Html5Qrcode("hidden-qr-reader");
+      const decodedText = await html5QrCode.scanFile(file, true);
+      
+      try { html5QrCode.clear(); } catch(e) {}
+      
+      const lowerText = decodedText.toLowerCase();
+      const isValid = ['sefaz', 'nfce', 'fazenda', 'qrcode'].some(k => lowerText.includes(k));
+      
+      if (!isValid) {
+        showToast('QR Code inválido, tente novamente');
+        setLoading(false);
+        return;
       }
-    });
+
+      const BASE_URL = import.meta.env.VITE_API_URL || "https://vida-software-backend.onrender.com";
+      const response = await fetch(`${BASE_URL}/nota-fiscal/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrcode_url: decodedText })
+      });
+      
+      const data = await response.json();
+      console.log('RESPOSTA SEFAZ:', JSON.stringify(data, null, 2));
+      
+      setLoading(false);
+      
+      if (!data || data.erro) {
+        showToast(data.erro);
+        return;
+      }
+      
+      setDebugData(data);
+      
+      setReviewData({
+        estabelecimento: data.estabelecimento || '',
+        valor_total: data.valor_total ? data.valor_total.toString().replace('.', ',') : '',
+        data: data.data || new Date().toISOString().split('T')[0],
+        categoria: '',
+        observacoes: data.estabelecimento || ''
+      });
+      
+      setStep('review');
+      
+    } catch (err) {
+      setLoading(false);
+      showToast('QR Code não encontrado na imagem. Tente outra foto.');
+    }
   };
 
   const handleSave = async () => {
@@ -239,39 +138,46 @@ export default function QRCodeScanner({ onClose, onSaveSuccess }) {
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: T.ink, display: 'flex', flexDirection: 'column', zIndex: 9999 }}>
       
       {toast && (
-        <div style={{ position: 'absolute', top: 80, left: '5%', width: '90%', padding: 14, background: '#dc2626', color: '#fff', textAlign: 'center', fontFamily: T.fontBody, fontWeight: 700, borderRadius: 14, zIndex: 10000, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+        <div style={{ position: 'absolute', top: 80, left: '5%', width: '90%', padding: 16, background: '#dc2626', color: '#fff', textAlign: 'center', fontFamily: T.fontBody, fontWeight: 700, borderRadius: 14, zIndex: 10000, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
           {toast}
         </div>
       )}
 
       {step === 'scanner' && (
-        <>
-          <div style={{ padding: '20px', display: 'flex', justifyContent: 'flex-end', position: 'absolute', top: 0, right: 0, zIndex: 10, width: '100%' }}>
-            <button onClick={onClose} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: T.blur, color: '#fff', border: 'none', borderRadius: 20, padding: '10px 18px', fontFamily: T.fontBody, fontSize: 15, fontWeight: 700 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: T.blur, color: '#fff', border: 'none', borderRadius: 20, padding: '10px 18px', fontFamily: T.fontBody, fontSize: 15, fontWeight: 700 }}>
               ✕ Cancelar
             </button>
           </div>
           
-          <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
-            {loading && (
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: T.fontBody, fontWeight: 700, color: '#fff', fontSize: 16 }}>
-                <div style={{ fontSize: 40, marginBottom: 16 }}>⏳</div>
-                Consultando SEFAZ...
-              </div>
-            )}
-            
-            <div id="qr-reader" style={{ width: '100%', height: '100%', border: 'none' }}></div>
-            
-            <div style={{ position: 'absolute', bottom: 40, left: 0, width: '100%', display: 'flex', justifyContent: 'center', gap: 20, zIndex: 10 }}>
-              <button onClick={forceFocus} style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: T.blur, border: '1px solid rgba(255,255,255,0.4)', borderRadius: 30, padding: '14px 24px', color: '#fff', fontFamily: T.fontBody, fontWeight: 700, fontSize: 16 }}>
-                🔦 Foco
-              </button>
-              <button onClick={manualCapture} style={{ background: '#fff', color: T.ink, border: 'none', borderRadius: 30, padding: '14px 24px', fontFamily: T.fontBody, fontWeight: 800, fontSize: 16 }}>
-                📷 Capturar
-              </button>
-            </div>
-          </div>
-        </>
+          <h2 style={{ fontFamily: T.fontHead, fontSize: 24, fontWeight: 700, color: '#fff', marginBottom: 40, textAlign: 'center' }}>
+            Adicionar Nota Fiscal
+          </h2>
+
+          <input 
+            type="file" 
+            accept="image/*" 
+            capture="environment" 
+            ref={fileInputRef} 
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
+
+          <button onClick={() => fileInputRef.current?.click()} style={{ background: '#fff', color: T.ink, border: 'none', borderRadius: 14, padding: '18px 24px', fontFamily: T.fontBody, fontSize: 18, fontWeight: 800, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, width: '100%', justifyContent: 'center' }}>
+            <span style={{ fontSize: 24 }}>📷</span> Selecionar foto da NFC-e
+          </button>
+
+          {/* Fallback silencioso necessário como alvo para a biblioteca instanciar a classe */}
+          <div id="hidden-qr-reader" style={{ display: 'none' }}></div>
+
+          {loading && (
+             <div style={{ marginTop: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: T.fontBody, fontWeight: 700, color: '#fff', fontSize: 16 }}>
+               <div style={{ fontSize: 40, marginBottom: 16 }}>⏳</div>
+               Processando imagem...
+             </div>
+          )}
+        </div>
       )}
 
       {step === 'review' && (
@@ -283,6 +189,18 @@ export default function QRCodeScanner({ onClose, onSaveSuccess }) {
               Salvando...
             </div>
           )}
+
+          {/* Debug Resposta */}
+          <div style={{ marginBottom: 24 }}>
+            <button onClick={() => setShowDebug(!showDebug)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 14px', fontFamily: T.fontBody, fontSize: 14, width: '100%', textAlign: 'left', fontWeight: 600 }}>
+              {showDebug ? '▼ Esconder resposta da API (debug)' : '▶ Ver resposta da API (debug)'}
+            </button>
+            {showDebug && debugData && (
+              <pre style={{ background: 'rgba(0,0,0,0.6)', padding: 14, borderRadius: 8, marginTop: 8, color: '#10b981', fontSize: 12, overflowX: 'auto', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {JSON.stringify(debugData, null, 2)}
+              </pre>
+            )}
+          </div>
 
           <label style={labelStyle}>Estabelecimento</label>
           <input type="text" value={reviewData.estabelecimento} onChange={e => setReviewData({...reviewData, estabelecimento: e.target.value})} style={inputStyle} />
