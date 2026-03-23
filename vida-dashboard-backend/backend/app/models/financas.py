@@ -24,6 +24,7 @@ class Transacao(Base):
     valor = Column(Float, nullable=False)
     categoria = Column(String, nullable=False)
     descricao = Column(String, nullable=True)
+    tipo_pagamento = Column(String, server_default="pix", nullable=True)
     # fixo | variavel
     custo_fixo = Column(Boolean, default=False, nullable=False)
     criado_em = Column(DateTime(timezone=True), server_default=func.now())

@@ -24,6 +24,7 @@ class TransacaoCreate(BaseModel):
     categoria: str
     descricao: Optional[str] = None
     custo_fixo: bool = False
+    tipo_pagamento: Optional[str] = "pix"
 
 
 class TransacaoResponse(TransacaoCreate):

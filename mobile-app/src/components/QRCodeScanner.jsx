@@ -12,7 +12,13 @@ const T = {
   fontHead:    "'Syne', sans-serif"
 };
 
-const categories = ['alimentacao', 'transporte', 'lazer', 'saude', 'moradia', 'investimento', 'salario'];
+const categories = ['alimentacao', 'transporte', 'lazer', 'saude', 'moradia', 'investimento', 'salario', 'outros'];
+
+const formatarValor = (valor) => {
+  const nums = valor.replace(/\D/g, '');
+  const centavos = (parseInt(nums || '0') / 100).toFixed(2);
+  return centavos.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
 
 export default function QRCodeScanner({ onClose, onSaveSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -22,7 +28,7 @@ export default function QRCodeScanner({ onClose, onSaveSuccess }) {
   
   const [reviewData, setReviewData] = useState({
     estabelecimento: '',
-    valor_total: '',
+    valor_total: '0,00',
     data: new Date().toISOString().split('T')[0],
     categoria: '',
     observacoes: ''
@@ -80,7 +86,7 @@ export default function QRCodeScanner({ onClose, onSaveSuccess }) {
       
       setReviewData({
         estabelecimento: data.estabelecimento || '',
-        valor_total: data.valor_total ? data.valor_total.toString().replace('.', ',') : '',
+        valor_total: data.valor_total ? formatarValor((data.valor_total * 100).toFixed(0).toString()) : '0,00',
         data: data.data || new Date().toISOString().split('T')[0],
         categoria: '',
         observacoes: data.estabelecimento || ''
@@ -100,7 +106,7 @@ export default function QRCodeScanner({ onClose, onSaveSuccess }) {
       return;
     }
     
-    const numericValue = parseFloat(reviewData.valor_total.replace(',', '.'));
+    const numericValue = parseFloat(reviewData.valor_total.replace(/\./g, '').replace(',', '.'));
     if (isNaN(numericValue) || numericValue <= 0) {
       showToast('Valor inválido');
       return;
@@ -115,6 +121,7 @@ export default function QRCodeScanner({ onClose, onSaveSuccess }) {
         tipo: 'saida',
         categoria: reviewData.categoria,
         valor: numericValue,
+        tipo_pagamento: 'pix',
         descricao: reviewData.observacoes || null,
         custo_fixo: false
       });
@@ -206,7 +213,10 @@ export default function QRCodeScanner({ onClose, onSaveSuccess }) {
           <input type="text" value={reviewData.estabelecimento} onChange={e => setReviewData({...reviewData, estabelecimento: e.target.value})} style={inputStyle} />
           
           <label style={labelStyle}>Valor Total</label>
-          <input type="number" step="0.01" inputMode="decimal" value={reviewData.valor_total} onChange={e => setReviewData({...reviewData, valor_total: e.target.value})} style={{...inputStyle, fontSize: 28, fontWeight: 700, height: 64}} required />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 20 }}>
+            <span style={{ position: 'absolute', left: 16, top: 18, fontFamily: T.fontBody, fontSize: 22, color: '#fff', fontWeight: 700 }}>R$</span>
+            <input type="text" inputMode="numeric" value={reviewData.valor_total} onChange={e => setReviewData({...reviewData, valor_total: formatarValor(e.target.value)})} style={{...inputStyle, paddingLeft: 56, fontSize: 28, fontWeight: 700, height: 64, marginBottom: 0}} required />
+          </div>
 
           <label style={labelStyle}>Data da Compra</label>
           <input type="date" value={reviewData.data} onChange={e => setReviewData({...reviewData, data: e.target.value})} style={inputStyle} required />
