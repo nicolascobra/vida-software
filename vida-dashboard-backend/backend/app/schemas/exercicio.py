@@ -1,12 +1,12 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import date, datetime
 
 
 class TreinoCreate(BaseModel):
     user_id: str
     data: date
-    categoria: str  # costas | triceps | biceps | perna | peito | ombro | cardio | full_body | outro
+    categoria: List[str]
     qualidade: str  # abaixo_esperado | medio | acima_esperado
     calorias_gastas: Optional[float] = None
     observacoes: Optional[str] = None

@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, Date, DateTime
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import ARRAY
 from app.database import Base
 
 
@@ -9,9 +10,7 @@ class Treino(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String, index=True, nullable=False)
     data = Column(Date, nullable=False)
-    # costas | triceps | biceps | perna | peito | ombro | cardio | full_body | outro
-    categoria = Column(String, nullable=False)
-    # abaixo_esperado | medio | acima_esperado
+    categoria = Column(ARRAY(String), nullable=False)
     qualidade = Column(String, nullable=False)
     calorias_gastas = Column(Float, nullable=True)
     observacoes = Column(String, nullable=True)

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { registrarTransacao } from '../services/api';
 import QRCodeScanner from '../components/QRCodeScanner';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 const T = {
   glass:       'rgba(255,255,255,0.55)',
@@ -19,6 +20,19 @@ const formatarValor = (valor) => {
   return centavos.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 };
 
+const formatarData = (valor) => {
+  const nums = valor.replace(/\D/g, '').slice(0, 8);
+  if (nums.length <= 2) return nums;
+  if (nums.length <= 4) return `${nums.slice(0,2)}/${nums.slice(2)}`;
+  return `${nums.slice(0,2)}/${nums.slice(2,4)}/${nums.slice(4)}`;
+};
+
+const paraISO = (dataStr) => {
+  if (!dataStr || dataStr.length !== 10) return new Date().toISOString().split('T')[0];
+  const [d, m, a] = dataStr.split('/');
+  return `${a}-${m}-${d}`;
+};
+
 const categories = ['alimentacao', 'transporte', 'lazer', 'saude', 'moradia', 'investimento', 'salario', 'outros'];
 const paymentTypes = [
   { id: 'credito', label: 'Crédito' },
@@ -29,7 +43,10 @@ const paymentTypes = [
 
 export default function Financeiro() {
   const navigate = useNavigate();
-  const [data, setData] = useState(new Date().toISOString().split('T')[0]);
+  const hoje = new Date();
+  const dInit = String(hoje.getDate()).padStart(2, '0') + '/' + String(hoje.getMonth() + 1).padStart(2, '0') + '/' + hoje.getFullYear();
+  
+  const [data, setData] = useState(dInit);
   const [tipo, setTipo] = useState('saida');
   const [valor, setValor] = useState('0,00');
   const [categoria, setCategoria] = useState('');
@@ -37,20 +54,26 @@ export default function Financeiro() {
   const [descricao, setDescricao] = useState('');
   const [custoFixo, setCustoFixo] = useState(false);
   const [status, setStatus] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!categoria) return alert("Selecione uma categoria");
-    setStatus('loading');
+    if (data.length !== 10) return setStatus('Erro: Data incompleta');
+    
+    setIsLoading(true);
     let numericValue = parseFloat(valor.replace(/\./g, '').replace(',', '.'));
-    if (isNaN(numericValue) || numericValue <= 0) return setStatus('❌ Erro: Valor inválido');
+    if (isNaN(numericValue) || numericValue <= 0) {
+      setIsLoading(false);
+      return setStatus('Erro: Valor inválido');
+    }
 
     try {
       const userId = localStorage.getItem('user_id');
       await registrarTransacao({
         user_id: userId,
-        data,
+        data: paraISO(data),
         tipo,
         categoria,
         valor: numericValue,
@@ -58,11 +81,14 @@ export default function Financeiro() {
         descricao: descricao || null,
         custo_fixo: custoFixo
       });
-      setStatus('✅ Registrado!');
+      setIsLoading(false);
+      setStatus('Registrado com sucesso!');
       setValor('0,00'); setDescricao(''); setCustoFixo(false);
       setTimeout(() => setStatus(null), 3000);
     } catch (error) {
-      setStatus('❌ Erro ao registrar');
+      setIsLoading(false);
+      setStatus('Erro ao registrar');
+      setTimeout(() => setStatus(null), 3000);
     }
   };
 
@@ -71,21 +97,23 @@ export default function Financeiro() {
 
   return (
     <div className="container" style={{ paddingBottom: 100 }}>
+      {isLoading && <LoadingOverlay text="Salvando..." />}
+      
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 30, marginTop: 20 }}>
         <button onClick={() => navigate('/home')} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer' }}>←</button>
         <h1 className="title">Financeiro</h1>
       </div>
 
-      {status && <div style={{ padding: 16, background: status.includes('Erro') || status.includes('❌') ? 'rgba(220,38,38,0.1)' : 'rgba(34,197,94,0.1)', color: status.includes('Erro') || status.includes('❌') ? '#dc2626' : '#16a34a', borderRadius: 10, marginBottom: 20, textAlign: 'center', fontFamily: T.fontBody, fontWeight: 600 }}>{status === 'loading' ? '⏳ Salvando...' : status}</div>}
+      {status && <div style={{ padding: 16, background: status.includes('Erro') ? 'rgba(220,38,38,0.1)' : 'rgba(34,197,94,0.1)', color: status.includes('Erro') ? '#dc2626' : '#16a34a', borderRadius: 10, marginBottom: 20, textAlign: 'center', fontFamily: T.fontBody, fontWeight: 600 }}>{status}</div>}
 
       <form onSubmit={handleSubmit} style={{ background: T.glass, backdropFilter: T.blur, WebkitBackdropFilter: T.blur, border: `1px solid ${T.glassBorder}`, borderRadius: 14, padding: 20, boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
         
         <button type="button" onClick={() => setShowScanner(true)} style={{ width: '100%', background: 'rgba(255,255,255,0.8)', color: T.ink, border: '1px solid rgba(0,0,0,0.1)', borderRadius: 10, padding: 16, fontFamily: T.fontBody, fontSize: 15, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <span style={{ fontSize: 20 }}>📷</span> Preencher com Nota Fiscal
+          Preencher com Nota Fiscal
         </button>
 
         <label style={labelStyle}>Data</label>
-        <input type="date" value={data} onChange={e => setData(e.target.value)} style={inputStyle} required />
+        <input type="text" inputMode="numeric" placeholder="DD/MM/AAAA" maxLength={10} value={data} onChange={e => setData(formatarData(e.target.value))} style={inputStyle} required />
 
         <label style={labelStyle}>Tipo</label>
         <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
@@ -145,7 +173,7 @@ export default function Financeiro() {
           onClose={() => setShowScanner(false)}
           onSaveSuccess={() => {
             setShowScanner(false);
-            setStatus('Lançamento salvo! 💰');
+            setStatus('Lançamento salvo!');
             setTimeout(() => setStatus(null), 3000);
           }}
         />

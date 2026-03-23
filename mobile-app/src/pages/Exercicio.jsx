@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { registrarTreino } from '../services/api';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 const T = {
   glass:       'rgba(255,255,255,0.55)',
@@ -12,6 +13,21 @@ const T = {
   fontHead:    "'Syne', sans-serif",
   fontBody:    "'DM Sans', sans-serif",
 };
+
+const formatarData = (valor) => {
+  const nums = valor.replace(/\D/g, '').slice(0, 8);
+  if (nums.length <= 2) return nums;
+  if (nums.length <= 4) return `${nums.slice(0,2)}/${nums.slice(2)}`;
+  return `${nums.slice(0,2)}/${nums.slice(2,4)}/${nums.slice(4)}`;
+};
+
+const paraISO = (dataStr) => {
+  if (!dataStr || dataStr.length !== 10) return new Date().toISOString().split('T')[0];
+  const [d, m, a] = dataStr.split('/');
+  return `${a}-${m}-${d}`;
+};
+
+const categoriasTreino = ['Costas', 'Tríceps', 'Bíceps', 'Perna', 'Peito', 'Ombro', 'Cardio', 'Full Body', 'Outro'];
 
 const inputStyle = {
   width: '100%', minHeight: 48, padding: '14px 16px', background: 'rgba(255,255,255,0.8)',
@@ -26,56 +42,94 @@ export default function Exercicio() {
   const navigate = useNavigate();
   const userId = localStorage.getItem('user_id');
   
-  const [data, setData] = useState(new Date().toISOString().split('T')[0]);
-  const [categoria, setCategoria] = useState('costas');
+  const hoje = new Date();
+  const dInit = String(hoje.getDate()).padStart(2, '0') + '/' + String(hoje.getMonth() + 1).padStart(2, '0') + '/' + hoje.getFullYear();
+  
+  const [data, setData] = useState(dInit);
+  const [categorias, setCategorias] = useState([]);
   const [qualidade, setQualidade] = useState('medio');
   const [calorias, setCalorias] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [status, setStatus] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const toggleCategoria = (catText) => {
+    // lowercase the payload string, strip accents if you want, but user simply used the string raw or lowercase
+    const catId = catText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(' ', '_');
+    
+    setCategorias(prev => {
+      if (prev.includes(catId)) return prev.filter(c => c !== catId);
+      return [...prev, catId];
+    });
+  };
+
+  const isSelected = (catText) => {
+    const catId = catText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(' ', '_');
+    return categorias.includes(catId);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus('loading');
+    if (categorias.length === 0) return setStatus('Erro: Selecione ao menos uma categoria');
+    if (data.length !== 10) return setStatus('Erro: Data incompleta');
+
+    setIsLoading(true);
     try {
       await registrarTreino({
-        user_id: userId, data, categoria, qualidade,
+        user_id: userId, 
+        data: paraISO(data), 
+        categoria: categorias, // List[str] per requirements
+        qualidade,
         calorias_gastas: calorias ? parseInt(calorias) : null,
         observacoes: observacoes || null
       });
+      setIsLoading(false);
       setStatus('Treino salvo!');
-      setCalorias(''); setObservacoes('');
+      setCalorias(''); setObservacoes(''); setCategorias([]);
       setTimeout(() => setStatus(null), 3000);
     } catch (error) {
+      setIsLoading(false);
       setStatus('Erro ao salvar');
+      setTimeout(() => setStatus(null), 3000);
     }
   };
 
   return (
     <div className="container">
+      {isLoading && <LoadingOverlay text="Salvando treino..." />}
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 30 }}>
         <button className="back-btn" onClick={() => navigate('/home')} style={{ background: 'none', border: 'none', fontSize: 24, color: T.textMut, padding: 0 }}>←</button>
         <h1 className="title">Exercício</h1>
       </div>
 
-      {status && <div style={{ padding: 16, background: status.includes('Erro') ? 'rgba(220,38,38,0.1)' : 'rgba(34,197,94,0.1)', color: status.includes('Erro') ? '#dc2626' : '#16a34a', borderRadius: 10, marginBottom: 20, textAlign: 'center', fontFamily: T.fontBody, fontWeight: 600 }}>{status === 'loading' ? '⏳ Salvando...' : status}</div>}
+      {status && <div style={{ padding: 16, background: status.includes('Erro') ? 'rgba(220,38,38,0.1)' : 'rgba(34,197,94,0.1)', color: status.includes('Erro') ? '#dc2626' : '#16a34a', borderRadius: 10, marginBottom: 20, textAlign: 'center', fontFamily: T.fontBody, fontWeight: 600 }}>{status}</div>}
 
       <form onSubmit={handleSubmit} style={{ background: T.glass, backdropFilter: T.blur, WebkitBackdropFilter: T.blur, border: `1px solid ${T.glassBorder}`, borderRadius: 14, padding: 20, boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
         
         <label style={labelStyle}>Data</label>
-        <input type="date" value={data} onChange={e => setData(e.target.value)} style={inputStyle} required />
+        <input type="text" inputMode="numeric" placeholder="DD/MM/AAAA" maxLength={10} value={data} onChange={e => setData(formatarData(e.target.value))} style={inputStyle} required />
 
-        <label style={labelStyle}>Categoria</label>
-        <select value={categoria} onChange={e => setCategoria(e.target.value)} style={inputStyle}>
-          <option value="costas">Costas</option>
-          <option value="triceps">Tríceps</option>
-          <option value="biceps">Bíceps</option>
-          <option value="perna">Perna</option>
-          <option value="peito">Peito</option>
-          <option value="ombro">Ombro</option>
-          <option value="cardio">Cardio</option>
-          <option value="full_body">Full Body</option>
-          <option value="outro">Outro</option>
-        </select>
+        <label style={labelStyle}>Categoria (múltipla seleção)</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+          {categoriasTreino.map(cat => (
+            <button 
+              key={cat} 
+              type="button" 
+              onClick={() => toggleCategoria(cat)} 
+              style={{ 
+                padding: '8px 14px', 
+                borderRadius: 20, 
+                border: 'none', 
+                background: isSelected(cat) ? T.ink : 'rgba(255,255,255,0.5)', 
+                color: isSelected(cat) ? '#fff' : T.textSub, 
+                fontFamily: T.fontBody, fontSize: 13, fontWeight: 600
+              }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
 
         <label style={labelStyle}>Qualidade</label>
         <select value={qualidade} onChange={e => setQualidade(e.target.value)} style={inputStyle}>

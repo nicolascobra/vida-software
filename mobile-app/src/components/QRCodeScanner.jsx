@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { registrarTransacao } from '../services/api';
+import LoadingOverlay from './LoadingOverlay';
 
 const T = {
   glass:       'rgba(255,255,255,0.55)',
@@ -144,6 +145,8 @@ export default function QRCodeScanner({ onClose, onSaveSuccess }) {
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: T.ink, display: 'flex', flexDirection: 'column', zIndex: 9999 }}>
       
+      {loading && <LoadingOverlay text="Carregando..." />}
+
       {toast && (
         <div style={{ position: 'absolute', top: 80, left: '5%', width: '90%', padding: 16, background: '#dc2626', color: '#fff', textAlign: 'center', fontFamily: T.fontBody, fontWeight: 700, borderRadius: 14, zIndex: 10000, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
           {toast}
@@ -154,7 +157,7 @@ export default function QRCodeScanner({ onClose, onSaveSuccess }) {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
             <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: T.blur, color: '#fff', border: 'none', borderRadius: 20, padding: '10px 18px', fontFamily: T.fontBody, fontSize: 15, fontWeight: 700 }}>
-              ✕ Cancelar
+              Cancelar
             </button>
           </div>
           
@@ -172,35 +175,22 @@ export default function QRCodeScanner({ onClose, onSaveSuccess }) {
           />
 
           <button onClick={() => fileInputRef.current?.click()} style={{ background: '#fff', color: T.ink, border: 'none', borderRadius: 14, padding: '18px 24px', fontFamily: T.fontBody, fontSize: 18, fontWeight: 800, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, width: '100%', justifyContent: 'center' }}>
-            <span style={{ fontSize: 24 }}>📷</span> Selecionar foto da NFC-e
+            Selecionar foto da NFC-e
           </button>
 
           {/* Fallback silencioso necessário como alvo para a biblioteca instanciar a classe */}
           <div id="hidden-qr-reader" style={{ display: 'none' }}></div>
-
-          {loading && (
-             <div style={{ marginTop: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: T.fontBody, fontWeight: 700, color: '#fff', fontSize: 16 }}>
-               <div style={{ fontSize: 40, marginBottom: 16 }}>⏳</div>
-               Processando imagem...
-             </div>
-          )}
         </div>
       )}
 
       {step === 'review' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px', overflowY: 'auto' }}>
           <h2 style={{ fontFamily: T.fontHead, fontSize: 24, fontWeight: 700, color: '#fff', marginBottom: 24, marginTop: 10 }}>Revisar NFC-e</h2>
-          
-          {loading && (
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.fontBody, fontWeight: 600, color: '#fff', fontSize: 18 }}>
-              Salvando...
-            </div>
-          )}
 
           {/* Debug Resposta */}
           <div style={{ marginBottom: 24 }}>
             <button onClick={() => setShowDebug(!showDebug)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 14px', fontFamily: T.fontBody, fontSize: 14, width: '100%', textAlign: 'left', fontWeight: 600 }}>
-              {showDebug ? '▼ Esconder resposta da API (debug)' : '▶ Ver resposta da API (debug)'}
+              {showDebug ? 'Esconder resposta da API (debug)' : 'Ver resposta da API (debug)'}
             </button>
             {showDebug && debugData && (
               <pre style={{ background: 'rgba(0,0,0,0.6)', padding: 14, borderRadius: 8, marginTop: 8, color: '#10b981', fontSize: 12, overflowX: 'auto', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>

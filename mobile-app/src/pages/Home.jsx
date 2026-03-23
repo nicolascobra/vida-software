@@ -51,7 +51,7 @@ export default function Home() {
                 gap: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
               }}
             >
-              <span style={{ fontSize: 20 }}>📲</span> Instalar App
+              <span style={{ fontSize: 16 }}>Instalar App</span>
             </button>
           )}
 

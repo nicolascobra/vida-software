@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CARDAPIO from '../constants/cardapio';
 import { criarRefeicao, adicionarItem } from '../services/api';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 const T = {
   glass:       'rgba(255,255,255,0.55)',
@@ -12,6 +13,19 @@ const T = {
   textMut:     '#a3a3a3',
   fontHead:    "'Syne', sans-serif",
   fontBody:    "'DM Sans', sans-serif",
+};
+
+const formatarData = (valor) => {
+  const nums = valor.replace(/\D/g, '').slice(0, 8);
+  if (nums.length <= 2) return nums;
+  if (nums.length <= 4) return `${nums.slice(0,2)}/${nums.slice(2)}`;
+  return `${nums.slice(0,2)}/${nums.slice(2,4)}/${nums.slice(4)}`;
+};
+
+const paraISO = (dataStr) => {
+  if (!dataStr || dataStr.length !== 10) return new Date().toISOString().split('T')[0];
+  const [d, m, a] = dataStr.split('/');
+  return `${a}-${m}-${d}`;
 };
 
 const TIPOS = [
@@ -33,10 +47,14 @@ const inputStyle = {
 export default function Alimentacao() {
   const navigate = useNavigate();
   const userId = localStorage.getItem('user_id');
-  const [data, setData] = useState(new Date().toISOString().split('T')[0]);
+  const hoje = new Date();
+  const dInit = String(hoje.getDate()).padStart(2, '0') + '/' + String(hoje.getMonth() + 1).padStart(2, '0') + '/' + hoje.getFullYear();
+  
+  const [data, setData] = useState(dInit);
   const [aberto, setAberto] = useState(null);
   const [selecionados, setSelecionados] = useState({});
   const [status, setStatus] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const toggleItem = (tipo, index) => {
     setSelecionados(prev => {
@@ -57,10 +75,15 @@ export default function Alimentacao() {
   const salvarRefeicao = async (tipo) => {
     const sel = selecionados[tipo] || [];
     if (sel.length === 0) return;
-    setStatus(prev => ({ ...prev, [tipo]: '⏳' }));
+    if (data.length !== 10) {
+      setStatus(prev => ({ ...prev, [tipo]: 'Erro: Data incompleta' }));
+      return;
+    }
+
+    setIsLoading(true);
     
     try {
-      const dataRef = await criarRefeicao(userId, data);
+      const dataRef = await criarRefeicao(userId, paraISO(data));
       const refId = dataRef.refeicao_diaria_id || dataRef.id;
       
       const itemsPayload = sel.map(index => {
@@ -72,23 +95,27 @@ export default function Alimentacao() {
       });
 
       await Promise.all(itemsPayload.map(item => adicionarItem(refId, tipo, item)));
-      setStatus(prev => ({ ...prev, [tipo]: 'Salvo!' }));
+      setIsLoading(false);
+      setStatus(prev => ({ ...prev, [tipo]: 'Salvo com sucesso!' }));
       setTimeout(() => { setStatus(prev => ({ ...prev, [tipo]: null })); setAberto(null); }, 2000);
     } catch (err) {
-      setStatus(prev => ({ ...prev, [tipo]: 'Erro' }));
+      setIsLoading(false);
+      setStatus(prev => ({ ...prev, [tipo]: 'Erro de processamento' }));
     }
   };
 
   return (
-    <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
+    <div className="container" style={{ paddingBottom: 100 }}>
+      {isLoading && <LoadingOverlay text="Salvando refeição..." />}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30, marginTop: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
           <button onClick={() => navigate('/home')} style={{ background: 'none', border: 'none', fontSize: 24, color: T.textMut, padding: 0 }}>
             ←
           </button>
           <h1 className="title">Alimentação</h1>
         </div>
-        <input type="date" value={data} onChange={e => setData(e.target.value)} style={{ ...inputStyle, minHeight: 40, width: 'auto' }} />
+        <input type="text" inputMode="numeric" placeholder="DD/MM" maxLength={10} value={data} onChange={e => setData(formatarData(e.target.value))} style={{ ...inputStyle, minHeight: 40, width: 120, textAlign: 'center' }} />
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -117,7 +144,7 @@ export default function Alimentacao() {
                     <button onClick={() => salvarRefeicao(tipo)} style={{ flex: 1, background: T.ink, color: '#fff', border: 'none', borderRadius: 10, padding: 16, fontFamily: T.fontBody, fontSize: 15, fontWeight: 600 }}>
                       Salvar
                     </button>
-                    {status[tipo] && <span style={{ fontFamily: T.fontBody, fontSize: 14, color: T.textSub }}>{status[tipo]}</span>}
+                    {status[tipo] && <span style={{ fontFamily: T.fontBody, fontSize: 14, color: status[tipo].includes('Erro') ? '#dc2626' : '#16a34a', fontWeight: 600 }}>{status[tipo]}</span>}
                   </div>
                 </div>
               )}
