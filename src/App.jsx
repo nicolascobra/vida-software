@@ -5,12 +5,14 @@ import Dashboard from './pages/Dashboard'
 import Exercicios from './pages/ExerciciosCompact'
 import Financas from './pages/Financas'
 import Alimentacao from './pages/Alimentacao'
+import Vision from './pages/Vision'
 
 // Rotas que mostram o topbar compartilhado
 const APP_ROUTES = [
-  { path: '/exercicios',  label: 'Exercícios',  pillColor: '#0a0a0a' },
-  { path: '/financas',    label: 'Financeiro',   pillColor: '#004444' },
-  { path: '/alimentacao', label: 'Alimentação',  pillColor: '#354f36' },
+  { path: '/thrive',  label: 'Thrive',  pillColor: '#0a0a0a' },
+  { path: '/returns', label: 'Returns', pillColor: '#004444' },
+  { path: '/vitals',  label: 'Vitals',  pillColor: '#354f36' },
+  { path: '/vision',  label: 'Vision',  pillColor: '#5b21b6' },
 ]
 const ROUTE_ORDER = Object.fromEntries(APP_ROUTES.map((r, i) => [r.path, i]))
 
@@ -55,9 +57,9 @@ function SharedTopbar() {
 
         {/* Brand */}
         <span style={{
-          fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 700,
-          color: '#0a0a0a', letterSpacing: '-0.02em', flexShrink: 0,
-        }}>vida</span>
+          fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 800,
+          color: '#0a0a0a', letterSpacing: '-0.06em', flexShrink: 0,
+        }}>vtr</span>
 
         {/* Nav pills com indicador deslizante via layoutId */}
         <div style={{
@@ -124,9 +126,10 @@ function AnimatedRoutes() {
         <Route path="/"           element={<Navigate to="/login" replace />} />
         <Route path="/login"      element={<Login />} />
         <Route path="/dashboard"  element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/exercicios"  element={<PrivateRoute><Exercicios /></PrivateRoute>} />
-        <Route path="/financas"    element={<PrivateRoute><Financas /></PrivateRoute>} />
-        <Route path="/alimentacao" element={<PrivateRoute><Alimentacao /></PrivateRoute>} />
+        <Route path="/thrive"  element={<PrivateRoute><Exercicios /></PrivateRoute>} />
+        <Route path="/returns" element={<PrivateRoute><Financas /></PrivateRoute>} />
+        <Route path="/vitals"  element={<PrivateRoute><Alimentacao /></PrivateRoute>} />
+        <Route path="/vision"  element={<PrivateRoute><Vision /></PrivateRoute>} />
       </Routes>
     </AnimatePresence>
   )

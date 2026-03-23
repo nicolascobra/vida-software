@@ -15,25 +15,32 @@ const T = {
 
 const MODULOS = [
   {
-    path: '/exercicios',
-    label: 'Exercícios',
+    path: '/thrive',
+    label: 'Thrive',
     desc: 'Treinos, peso e consistência',
     accent: '#0a0a0a',
     accentAlpha: 'rgba(10,10,10,0.07)',
   },
   {
-    path: '/financas',
-    label: 'Financeiro',
+    path: '/returns',
+    label: 'Returns',
     desc: 'Entradas, saídas e orçamento',
     accent: '#004444',
     accentAlpha: 'rgba(0,68,68,0.07)',
   },
   {
-    path: '/alimentacao',
-    label: 'Alimentação',
+    path: '/vitals',
+    label: 'Vitals',
     desc: 'Refeições, macros e adesão',
     accent: '#354f36',
     accentAlpha: 'rgba(53,79,54,0.07)',
+  },
+  {
+    path: '/vision',
+    label: 'Vision',
+    desc: 'Dashboard estratégica — VTR',
+    accent: '#5b21b6',
+    accentAlpha: 'rgba(91,33,182,0.07)',
   },
 ]
 
@@ -61,8 +68,8 @@ export default function Dashboard() {
           <p style={{ fontFamily: T.fontBody, fontSize: 11, color: T.textMut, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 6px' }}>
             Olá, {userId}
           </p>
-          <h1 style={{ fontFamily: T.fontHead, fontSize: 32, fontWeight: 800, color: T.ink, margin: 0, letterSpacing: '-0.04em' }}>
-            Vida Dashboard
+          <h1 style={{ fontFamily: T.fontHead, fontSize: 32, fontWeight: 800, color: T.ink, margin: 0, letterSpacing: '-0.06em' }}>
+            vetor
           </h1>
         </motion.div>
 

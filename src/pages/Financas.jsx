@@ -306,24 +306,23 @@ function CategoriaBar({ categoria, realizado, limite, percentual, selected, onCl
         transition: 'background 0.15s, border 0.15s',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {st && (
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.color, flexShrink: 0, display: 'inline-block' }} />
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.color, flexShrink: 0, display: 'inline-block', marginTop: 1 }} />
           )}
           <span style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 600, color: selected ? T.teal : T.text }}>
             {label}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontFamily: T.fontBody, fontSize: 11, color: T.textMut }}>
-            {fmt(realizado)}{limite ? ` / ${fmt(limite)}` : ''}
-          </span>
-          {pct != null && (
-            <span style={{ fontFamily: T.fontBody, fontSize: 10, fontWeight: 700, color: cor, minWidth: 28, textAlign: 'right' }}>
-              {pct}%
-            </span>
-          )}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontFamily: T.fontBody, fontSize: 11, fontWeight: 600, color: T.text }}>{fmt(realizado)}</span>
+            {pct != null && (
+              <span style={{ fontFamily: T.fontBody, fontSize: 10, fontWeight: 700, color: cor, minWidth: 26, textAlign: 'right' }}>{pct}%</span>
+            )}
+          </div>
+          {limite ? <span style={{ fontFamily: T.fontBody, fontSize: 9, color: T.textMut }}>de {fmt(limite)}</span> : null}
         </div>
       </div>
       <div style={{ height: 4, borderRadius: 99, background: 'rgba(0,0,0,0.07)', overflow: 'hidden' }}>
@@ -435,7 +434,7 @@ export default function Financas() {
   const cumulativeData = useMemo(() => {
     const daysInMonth  = new Date(ano, mes, 0).getDate()
     const limitChart   = selectedCat ? (limites[selectedCat] || 0) : totalLimite
-    const filterFn     = t => t.tipo === 'saida' && (!selectedCat || t.categoria === selectedCat)
+    const filterFn     = t => t.tipo === 'saida' && !t.custo_fixo && (!selectedCat || t.categoria === selectedCat)
 
     // Para o mês atual, parar em hoje; meses passados exibem o mês inteiro
     const hj = new Date()
@@ -449,12 +448,12 @@ export default function Financas() {
     })
 
     let cumul = 0
-    return Array.from({ length: lastDay }, (_, i) => {
+    return Array.from({ length: daysInMonth }, (_, i) => {
       const day = i + 1
-      cumul += byDay[day] || 0
+      if (day <= lastDay) cumul += byDay[day] || 0
       return {
         dia: day,
-        realizado: Math.round(cumul * 100) / 100,
+        realizado: day <= lastDay ? Math.round(cumul * 100) / 100 : null,
         referencia: Math.round((limitChart / daysInMonth) * day * 100) / 100,
       }
     })
@@ -470,6 +469,43 @@ export default function Financas() {
   [categoriasComDados])
 
   // Ritmo por categoria — ordena mais acelerado primeiro
+  const { totalFixo, totalVariavel } = useMemo(() => {
+    let fix = 0, vari = 0
+    transacoes.filter(t => t.tipo === 'saida').forEach(t => {
+      t.custo_fixo ? (fix += t.valor) : (vari += t.valor)
+    })
+    return { totalFixo: fix, totalVariavel: vari }
+  }, [transacoes])
+
+  // Realizado fixo e variável por categoria (calculado das transações, não do backend)
+  const realizadoPorCategoria = useMemo(() => {
+    const fixo = {}, variavel = {}
+    transacoes.filter(t => t.tipo === 'saida').forEach(t => {
+      if (t.custo_fixo) fixo[t.categoria]     = (fixo[t.categoria]     || 0) + t.valor
+      else              variavel[t.categoria] = (variavel[t.categoria] || 0) + t.valor
+    })
+    return { fixo, variavel }
+  }, [transacoes])
+
+  const pagamentoData = useMemo(() => {
+    const LABELS = { pix: 'Pix', dinheiro: 'Dinheiro', debito: 'Débito', credito: 'Crédito' }
+    const COLORS = { pix: '#00b6ad', dinheiro: '#16a34a', debito: '#3b82f6', credito: '#d97706' }
+    const map = {}
+    transacoes.filter(t => t.tipo === 'saida').forEach(t => {
+      const fp = t.tipo_pagamento || 'pix'
+      map[fp] = (map[fp] || 0) + t.valor
+    })
+    const total = Object.values(map).reduce((s, v) => s + v, 0)
+    return {
+      total,
+      credito: map.credito || 0,
+      items: Object.entries(map).map(([key, valor]) => ({
+        key, label: LABELS[key] || key, color: COLORS[key] || T.neutral,
+        valor, pct: total > 0 ? valor / total : 0,
+      })).sort((a, b) => b.valor - a.valor),
+    }
+  }, [transacoes])
+
   const ritmoData = useMemo(() => {
     const diasNoMes = new Date(ano, mes, 0).getDate()
     const hj = new Date()
@@ -479,7 +515,7 @@ export default function Financas() {
 
     return categoriasComDados.map(c => {
       const limite = c.limite_mensal || 0
-      const gasto  = c.realizado     || 0
+      const gasto  = realizadoPorCategoria.variavel[c.categoria] || 0
       const ritmoPrevisto   = limite > 0 ? limite / diasNoMes : 0
       const ritmoAtual      = gasto / diasDecorridos
       const ritmoNecessario = diasRestantes > 0 ? (limite - gasto) / diasRestantes : 0
@@ -490,26 +526,19 @@ export default function Financas() {
                    : 'folga'
       return { ...c, diasNoMes, diasDecorridos, diasRestantes, ritmoPrevisto, ritmoAtual, ritmoNecessario, ritmoRatio, percentoExcedido, status }
     }).sort((a, b) => b.ritmoRatio - a.ritmoRatio)
-  }, [categoriasComDados, mes, ano])
-
-  const { totalFixo, totalVariavel } = useMemo(() => {
-    let fix = 0, vari = 0
-    transacoes.filter(t => t.tipo === 'saida').forEach(t => {
-      t.custo_fixo ? (fix += t.valor) : (vari += t.valor)
-    })
-    return { totalFixo: fix, totalVariavel: vari }
-  }, [transacoes])
+  }, [categoriasComDados, realizadoPorCategoria, mes, ano])
 
   const adesaoData = useMemo(() => {
     const diasNoMes = new Date(ano, mes, 0).getDate()
     const hj = new Date()
     const isCurrentMonth = hj.getFullYear() === ano && (hj.getMonth() + 1) === mes
     const diasDecorridos = Math.max(1, isCurrentMonth ? hj.getDate() : diasNoMes)
-    // orçamento variável = total de limites (aproximação: ainda não temos distinção fixo/variável em limites)
-    const escalonado = totalLimite * (diasDecorridos / diasNoMes)
-    // score: 1 se gastou <= escalonado, proporcional abaixo se passou
-    const score = escalonado > 0 ? Math.min(1, escalonado / Math.max(1, totalVariavel)) : 1
-    return { score, escalonado, diasDecorridos, diasNoMes }
+    // Escalonado variável: usa totalLimite como proxy do orçamento variável
+    // (os limites representam o que a gente quer controlar — o variável)
+    const escalonadoVariavel = totalLimite * (diasDecorridos / diasNoMes)
+    // Score: 1 (100%) se gastou variável <= escalonado, proporcional abaixo se estourou
+    const score = escalonadoVariavel > 0 ? Math.min(1, escalonadoVariavel / Math.max(1, totalVariavel)) : 1
+    return { score, escalonadoVariavel, diasDecorridos, diasNoMes }
   }, [totalLimite, totalVariavel, mes, ano])
 
   const transacoesRecentes = useMemo(() =>
@@ -670,20 +699,25 @@ export default function Financas() {
                   </div>
                   <div>
                     <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.12em', display: 'block', marginBottom: 3 }}>Adesão ao Plano</span>
-                    <p style={{ fontFamily: T.fontHead, fontSize: 20, fontWeight: 800, color: '#fff', margin: '0 0 6px', letterSpacing: '-0.03em' }}>Financeiro</p>
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <p style={{ fontFamily: T.fontHead, fontSize: 20, fontWeight: 800, color: '#fff', margin: '0 0 10px', letterSpacing: '-0.03em' }}>Variável</p>
+
+                    {/* Comparação principal: variável realizado vs escalonado */}
+                    <div style={{ display: 'flex', gap: 14, marginBottom: 10 }}>
                       <div>
-                        <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.30)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Variável gasto</span>
-                        <p style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.80)', margin: '2px 0 0' }}>{fmt(totalVariavel)}</p>
+                        <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Realizado</span>
+                        <p style={{ fontFamily: T.fontBody, fontSize: 14, fontWeight: 700, color: '#fff', margin: '2px 0 0' }}>{fmt(totalVariavel)}</p>
                       </div>
+                      <div style={{ width: 1, background: 'rgba(255,255,255,0.12)', alignSelf: 'stretch' }} />
                       <div>
-                        <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.30)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Escalonado hoje</span>
-                        <p style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.80)', margin: '2px 0 0' }}>{fmt(adesaoData.escalonado)}</p>
+                        <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Escalonado hoje</span>
+                        <p style={{ fontFamily: T.fontBody, fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.70)', margin: '2px 0 0' }}>{fmt(adesaoData.escalonadoVariavel)}</p>
                       </div>
-                      <div>
-                        <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fixo (excluído)</span>
-                        <p style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.38)', margin: '2px 0 0' }}>{fmt(totalFixo)}</p>
-                      </div>
+                    </div>
+
+                    {/* Fixo: informativo, tom bem suave */}
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}>
+                      <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fixo</span>
+                      <span style={{ fontFamily: T.fontBody, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.32)' }}>{fmt(totalFixo)}</span>
                     </div>
                   </div>
                 </div>
@@ -759,7 +793,7 @@ export default function Financas() {
         </div>
 
         {/* ── 3 colunas ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2.4fr 1.6fr', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 2.8fr 1.4fr', gap: 14 }}>
 
           {/* col 1: categorias (clicáveis pra atualizar gráfico) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -779,72 +813,161 @@ export default function Financas() {
                   >ver tudo</button>
                 )}
               </div>
-              {loading
-                ? <p style={{ color: T.textMut, fontSize: 13 }}>Carregando…</p>
-                : ritmoData.length === 0
-                  ? <p style={{ color: T.textMut, fontSize: 13 }}>Sem dados este mês.</p>
-                  : ritmoData.map(c => (
-                      <CategoriaBar
-                        key={c.categoria}
-                        categoria={c.categoria}
-                        realizado={c.realizado}
-                        limite={c.limite_mensal}
-                        percentual={c.percentual}
-                        selected={selectedCat === c.categoria}
-                        status={c.limite_mensal > 0 ? c.status : null}
-                        onClick={() => setSelectedCat(prev => prev === c.categoria ? null : c.categoria)}
-                      />
-                    ))
-              }
 
-              {/* Painel de ritmo — aparece quando categoria selecionada */}
-              <AnimatePresence>
-                {selectedCat && (() => {
-                  const rd = ritmoData.find(r => r.categoria === selectedCat)
-                  if (!rd || !rd.limite_mensal) return null
-                  const st = RITMO_STATUS[rd.status]
-                  return (
-                    <motion.div key={selectedCat}
-                      initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-                      style={{ overflow: 'hidden' }}>
-                      <div style={{ marginTop: 4, padding: '12px 14px', background: `${st.color}10`, border: `1px solid ${st.color}33`, borderRadius: 10 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                          <span style={{ fontFamily: T.fontBody, fontSize: 11, fontWeight: 700, color: T.text }}>
-                            {CATEGORIAS_LABEL[selectedCat] || selectedCat} — ritmo
-                          </span>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: st.color, background: `${st.color}18`, border: `1px solid ${st.color}44`, borderRadius: 20, padding: '2px 8px' }}>
-                            {st.label}
-                          </span>
+              {loading ? <p style={{ color: T.textMut, fontSize: 13 }}>Carregando…</p> : <>
+
+                {/* ── Variável ── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  <span style={{ fontFamily: T.fontBody, fontSize: 9, fontWeight: 700, color: T.textMut, textTransform: 'uppercase', letterSpacing: '0.10em' }}>Variável</span>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(0,0,0,0.06)' }} />
+                  <span style={{ fontFamily: T.fontBody, fontSize: 9, color: T.textMut }}>
+                    {fmt(Object.values(realizadoPorCategoria.variavel).reduce((s, v) => s + v, 0))}
+                  </span>
+                </div>
+
+                {ritmoData.length === 0
+                  ? <p style={{ color: T.textMut, fontSize: 12, marginBottom: 10 }}>Sem dados variáveis.</p>
+                  : ritmoData.map(c => {
+                      const realVar = realizadoPorCategoria.variavel[c.categoria] || 0
+                      if (!realVar && !c.limite_mensal) return null
+                      const st = RITMO_STATUS[c.status]
+                      return (
+                        <div key={c.categoria}>
+                          <CategoriaBar
+                            categoria={c.categoria}
+                            realizado={realVar}
+                            limite={c.limite_mensal}
+                            percentual={null}
+                            selected={selectedCat === c.categoria}
+                            status={c.limite_mensal > 0 ? c.status : null}
+                            onClick={() => setSelectedCat(prev => prev === c.categoria ? null : c.categoria)}
+                          />
+                          {/* Painel de ritmo inline — abre imediatamente abaixo */}
+                          <AnimatePresence>
+                            {selectedCat === c.categoria && c.limite_mensal > 0 && (
+                              <motion.div key={`ritmo-${c.categoria}`}
+                                initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
+                                style={{ overflow: 'hidden' }}>
+                                <div style={{ margin: '4px 0 10px', padding: '12px 14px', background: `${st.color}10`, border: `1px solid ${st.color}33`, borderRadius: 10 }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                    <span style={{ fontFamily: T.fontBody, fontSize: 11, fontWeight: 700, color: T.text }}>
+                                      {CATEGORIAS_LABEL[c.categoria] || c.categoria} — ritmo
+                                    </span>
+                                    <span style={{ fontSize: 9, fontWeight: 700, color: st.color, background: `${st.color}18`, border: `1px solid ${st.color}44`, borderRadius: 20, padding: '2px 8px' }}>
+                                      {st.label}
+                                    </span>
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                                    {[
+                                      { label: 'Ritmo previsto', val: fmt(c.ritmoPrevisto) + '/dia', color: T.textSub },
+                                      { label: 'Ritmo atual',    val: fmt(c.ritmoAtual)    + '/dia', color: st.color },
+                                      c.diasRestantes > 0
+                                        ? { label: 'Novo escalonado', val: fmt(Math.max(0, c.ritmoNecessario)) + '/dia', color: c.ritmoNecessario < 0 ? '#dc2626' : T.teal }
+                                        : null,
+                                    ].filter(Boolean).map(row => (
+                                      <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: 10, color: T.textMut }}>{row.label}</span>
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: row.color }}>{row.val}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <p style={{ fontFamily: T.fontBody, fontSize: 10, color: T.textMut, margin: 0, lineHeight: 1.5 }}>
+                                    {c.status === 'estouro'
+                                      ? `Estourado em ${fmt(realVar - c.limite_mensal)}.`
+                                      : c.status === 'folga'
+                                        ? `${fmt(c.limite_mensal - realVar)} restantes. Máximo ${fmt(c.ritmoNecessario)}/dia.`
+                                        : `${c.percentoExcedido}% acima do ritmo. Máximo ${fmt(Math.max(0, c.ritmoNecessario))}/dia nos próximos ${c.diasRestantes} dias.`
+                                    }
+                                  </p>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
-                          {[
-                            { label: 'Ritmo previsto', val: fmt(rd.ritmoPrevisto) + '/dia', color: T.textSub },
-                            { label: 'Ritmo atual',    val: fmt(rd.ritmoAtual)    + '/dia', color: st.color },
-                            rd.diasRestantes > 0
-                              ? { label: 'Novo escalonado', val: fmt(Math.max(0, rd.ritmoNecessario)) + '/dia', color: rd.ritmoNecessario < 0 ? '#ef4444' : T.teal }
-                              : null,
-                          ].filter(Boolean).map(row => (
-                            <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontSize: 10, color: T.textMut }}>{row.label}</span>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: row.color }}>{row.val}</span>
-                            </div>
-                          ))}
-                        </div>
-                        <p style={{ fontFamily: T.fontBody, fontSize: 10, color: T.textMut, margin: 0, lineHeight: 1.5 }}>
-                          {rd.status === 'estouro'
-                            ? `Orçamento estourado em ${fmt(rd.realizado - rd.limite_mensal)}.`
-                            : rd.status === 'folga'
-                              ? `${fmt(rd.limite_mensal - rd.realizado)} restantes. Pode gastar ${fmt(rd.ritmoNecessario)}/dia.`
-                              : `${rd.percentoExcedido}% acima do ritmo. Nos próximos ${rd.diasRestantes} dias, máximo ${fmt(Math.max(0, rd.ritmoNecessario))}/dia.`
-                          }
-                        </p>
+                      )
+                    })
+                }
+
+                {/* ── Fixo ── */}
+                {Object.keys(realizadoPorCategoria.fixo).length > 0 && <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, marginTop: 4 }}>
+                    <span style={{ fontFamily: T.fontBody, fontSize: 9, fontWeight: 700, color: T.textMut, textTransform: 'uppercase', letterSpacing: '0.10em' }}>Fixo</span>
+                    <div style={{ flex: 1, height: 1, background: 'rgba(0,0,0,0.06)' }} />
+                    <span style={{ fontFamily: T.fontBody, fontSize: 9, color: T.textMut }}>
+                      {fmt(Object.values(realizadoPorCategoria.fixo).reduce((s, v) => s + v, 0))}
+                    </span>
+                  </div>
+                  {Object.entries(realizadoPorCategoria.fixo)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([cat, amount]) => (
+                      <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7, padding: '0 2px' }}>
+                        <span style={{ fontFamily: T.fontBody, fontSize: 12, color: T.textSub }}>
+                          {CATEGORIAS_LABEL[cat] || cat}
+                        </span>
+                        <span style={{ fontFamily: T.fontBody, fontSize: 11, fontWeight: 600, color: T.textMut }}>
+                          {fmt(amount)}
+                        </span>
                       </div>
-                    </motion.div>
-                  )
-                })()}
-              </AnimatePresence>
+                    ))
+                  }
+                </>}
+
+              </>}
             </motion.div>
+
+            {/* Card: Formas de Pagamento */}
+            {pagamentoData.items.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -3 }}
+                transition={{ ...springFluid, delay: 0.12 }}
+                style={card}
+              >
+                <span style={sectionLabel}>Formas de Pagamento</span>
+
+                {/* Barra empilhada total */}
+                <div style={{ height: 6, borderRadius: 99, overflow: 'hidden', display: 'flex', marginBottom: 12, gap: 1 }}>
+                  {pagamentoData.items.map(item => (
+                    <div key={item.key} style={{ width: `${item.pct * 100}%`, background: item.color, transition: 'width 0.6s ease' }} />
+                  ))}
+                </div>
+
+                {/* Linhas por método */}
+                {pagamentoData.items.map(item => (
+                  <div key={item.key} style={{ marginBottom: 9 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: item.color, flexShrink: 0, display: 'inline-block' }} />
+                        <span style={{ fontFamily: T.fontBody, fontSize: 11, fontWeight: 600, color: T.text }}>{item.label}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontFamily: T.fontBody, fontSize: 10, color: T.textMut }}>{Math.round(item.pct * 100)}%</span>
+                        <span style={{ fontFamily: T.fontBody, fontSize: 11, fontWeight: 700, color: T.textSub }}>{fmt(item.valor)}</span>
+                      </div>
+                    </div>
+                    <div style={{ height: 3, borderRadius: 99, background: 'rgba(0,0,0,0.06)' }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${item.pct * 100}%` }}
+                        transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
+                        style={{ height: '100%', borderRadius: 99, background: item.color }}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                {/* Alerta de crédito */}
+                {pagamentoData.credito > 0 && (
+                  <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.20)' }}>
+                    <p style={{ fontFamily: T.fontBody, fontSize: 10, color: '#92400e', margin: 0, lineHeight: 1.5 }}>
+                      <strong>{fmt(pagamentoData.credito)}</strong> em crédito = obrigação futura. Considere no planejamento do próximo mês.
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            )}
           </div>
 
           {/* col 2: gráficos */}
@@ -864,7 +987,7 @@ export default function Financas() {
                 </span>
                 <ExpandBtn onClick={() => setExpanded('ritmo')} />
               </div>
-              <ResponsiveContainer width="100%" height={160}>
+              <ResponsiveContainer width="100%" height={210}>
                 <LineChart
                   data={cumulativeData}
                   margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
@@ -884,7 +1007,7 @@ export default function Financas() {
                   <YAxis tickFormatter={v => `${(v/1000).toFixed(0)}k`} tick={{ fontSize: 9, fontFamily: T.fontBody, fill: T.textMut }} axisLine={false} tickLine={false} width={28} />
                   <Tooltip content={<LineTooltip />} />
                   <Line dataKey="referencia" name="Esperado" stroke={T.neutralLt} strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
-                  <Line dataKey="realizado"  name="Realizado" stroke={T.tealVibrant} strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: T.tealVibrant, stroke: '#fff', strokeWidth: 2 }} />
+                  <Line dataKey="realizado" name="Realizado" stroke={T.tealVibrant} strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5, fill: T.tealVibrant, stroke: '#fff', strokeWidth: 2 }} />
                 </LineChart>
               </ResponsiveContainer>
             </motion.div>
@@ -901,7 +1024,7 @@ export default function Financas() {
                 <span style={{ ...sectionLabel, marginBottom: 0 }}>Realizado vs Limite</span>
                 <ExpandBtn onClick={() => setExpanded('barras')} />
               </div>
-              <ResponsiveContainer width="100%" height={170}>
+              <ResponsiveContainer width="100%" height={210}>
                 <BarChart data={dadosBarras} barCategoryGap="30%" barGap={2} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 9, fontFamily: T.fontBody, fill: T.textMut }} axisLine={false} tickLine={false} />
@@ -974,15 +1097,19 @@ export default function Financas() {
               </div>
 
               {/* Legenda */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 10, fontSize: 10, fontFamily: T.fontBody, alignItems: 'center', flexWrap: 'wrap' }}>
-                <span style={{ color: T.textMut }}>sem mov.</span>
-                <span style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(0,182,173,0.28)', display: 'inline-block' }} />
-                <span style={{ color: T.alertGood }}>entrada</span>
-                <span style={{ color: T.textMut, margin: '0 2px' }}>·</span>
-                {['rgba(255,116,0,0.09)','rgba(255,116,0,0.22)','rgba(255,116,0,0.50)','rgba(255,116,0,0.85)'].map((bg, i) => (
-                  <span key={i} style={{ width: 12, height: 12, borderRadius: 3, background: bg, display: 'inline-block' }} />
-                ))}
-                <span style={{ color: T.orange }}>saída</span>
+              <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, fontFamily: T.fontBody }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(0,182,173,0.28)', flexShrink: 0, display: 'inline-block' }} />
+                  <span style={{ color: '#00b6ad' }}>Entrada</span>
+                  <span style={{ color: T.textMut, margin: '0 3px' }}>·</span>
+                  <span style={{ color: T.textMut }}>sem movimento</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, fontFamily: T.fontBody }}>
+                  {['rgba(255,116,0,0.09)','rgba(255,116,0,0.22)','rgba(255,116,0,0.50)','rgba(255,116,0,0.85)'].map((bg, i) => (
+                    <span key={i} style={{ width: 10, height: 10, borderRadius: 2, background: bg, flexShrink: 0, display: 'inline-block' }} />
+                  ))}
+                  <span style={{ color: T.orange, marginLeft: 3 }}>Saída (intensidade)</span>
+                </div>
               </div>
             </motion.div>
 
@@ -1206,7 +1333,7 @@ export default function Financas() {
               <YAxis tickFormatter={v => `${(v/1000).toFixed(0)}k`} tick={{ fontSize: 10, fontFamily: T.fontBody, fill: T.textMut }} axisLine={false} tickLine={false} width={36} />
               <Tooltip content={<LineTooltip />} />
               <Line dataKey="referencia" name="Esperado" stroke={T.neutralLt} strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
-              <Line dataKey="realizado" name="Realizado" stroke={T.tealVibrant} strokeWidth={2.5} dot={false} activeDot={{ r: 6, fill: T.tealVibrant, stroke: '#fff', strokeWidth: 2 }} />
+              <Line dataKey="realizado" name="Realizado" stroke={T.tealVibrant} strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 6, fill: T.tealVibrant, stroke: '#fff', strokeWidth: 2 }} />
             </LineChart>
           </ExpandModal>
         )}
