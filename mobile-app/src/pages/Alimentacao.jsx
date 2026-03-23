@@ -8,9 +8,9 @@ const T = {
   glass:       'rgba(255,255,255,0.55)',
   glassBorder: 'rgba(255,255,255,0.90)',
   blur:        'blur(28px) saturate(200%)',
-  ink:         '#0a0a0a',
-  textSub:     '#525252',
-  textMut:     '#a3a3a3',
+  ink:         '#354f36',
+  textSub:     '#4a6b4a',
+  textMut:     'rgba(53,79,54,0.50)',
   fontHead:    "'Syne', sans-serif",
   fontBody:    "'DM Sans', sans-serif",
 };
@@ -29,13 +29,11 @@ const paraISO = (dataStr) => {
 };
 
 const TIPOS = [
-  { id: 'pre_treino', label: 'Pré Treino' },
-  { id: 'cafe_da_manha', label: 'Café da Manhã' },
-  { id: 'lanche_manha', label: 'Lanche da Manhã' },
+  { id: 'cafe', label: 'Café da Manhã' },
   { id: 'almoco', label: 'Almoço' },
-  { id: 'lanche_tarde', label: 'Lanche da Tarde' },
-  { id: 'janta', label: 'Janta' },
-  { id: 'ceia', label: 'Ceia' }
+  { id: 'lanche', label: 'Lanche' },
+  { id: 'jantar', label: 'Jantar' },
+  { id: 'outro', label: 'Outro' }
 ];
 
 const inputStyle = {

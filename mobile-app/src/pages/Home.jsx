@@ -13,8 +13,8 @@ const T = {
 };
 
 const MODULOS = [
-  { path: '/alimentacao', label: 'Alimentação', desc: 'Refeições diárias', accent: '#a52a2a', accentAlpha: 'rgba(165,42,42,0.1)' },
-  { path: '/financeiro',  label: 'Financeiro',  desc: 'Entradas e saídas', accent: '#004444', accentAlpha: 'rgba(0,68,68,0.1)' },
+  { path: '/alimentacao', label: 'Alimentação', desc: 'Adesão Alimentar',    accent: '#354f36', accentAlpha: 'rgba(53,79,54,0.1)' },
+  { path: '/financeiro',  label: 'Financeiro',  desc: 'Entradas e saídas',   accent: '#004444', accentAlpha: 'rgba(0,68,68,0.1)' },
   { path: '/exercicio',   label: 'Exercício',   desc: 'Treinos e calorias', accent: '#0a0a0a', accentAlpha: 'rgba(10,10,10,0.1)' },
 ];
 

@@ -8,7 +8,7 @@ const T = {
   glass:       'rgba(255,255,255,0.55)',
   glassBorder: 'rgba(255,255,255,0.90)',
   blur:        'blur(28px) saturate(200%)',
-  ink:         '#0a0a0a',
+  ink:         '#004444',
   textSub:     '#525252',
   textMut:     '#a3a3a3',
   fontBody:    "'DM Sans', sans-serif"
@@ -33,7 +33,13 @@ const paraISO = (dataStr) => {
   return `${a}-${m}-${d}`;
 };
 
-const categories = ['alimentacao', 'transporte', 'lazer', 'saude', 'moradia', 'investimento', 'salario', 'outros'];
+const CATEGORIAS_INPUT = ['alimentacao', 'transporte', 'lazer', 'saude', 'moradia', 'investimento', 'salario', 'outro'];
+const CATEGORIAS_LABEL = {
+  alimentacao: 'Alimentação', transporte: 'Transporte', lazer: 'Lazer',
+  saude: 'Saúde', moradia: 'Moradia', investimento: 'Investimento',
+  salario: 'Salário', outro: 'Outro'
+};
+
 const paymentTypes = [
   { id: 'credito', label: 'Crédito' },
   { id: 'debito', label: 'Débito' },
@@ -139,9 +145,9 @@ export default function Financeiro() {
 
         <label style={labelStyle}>Categoria</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-          {categories.map(cat => (
-            <button key={cat} type="button" onClick={() => setCategoria(cat)} style={{ padding: '8px 14px', borderRadius: 20, border: 'none', background: categoria === cat ? T.ink : 'rgba(255,255,255,0.5)', color: categoria === cat ? '#fff' : T.textSub, fontFamily: T.fontBody, fontSize: 13, fontWeight: 600, textTransform: 'capitalize' }}>
-              {cat}
+          {CATEGORIAS_INPUT.map(cat => (
+            <button key={cat} type="button" onClick={() => setCategoria(cat)} style={{ padding: '8px 14px', borderRadius: 20, border: 'none', background: categoria === cat ? T.ink : 'rgba(255,255,255,0.5)', color: categoria === cat ? '#fff' : T.textSub, fontFamily: T.fontBody, fontSize: 13, fontWeight: 600 }}>
+              {CATEGORIAS_LABEL[cat]}
             </button>
           ))}
         </div>

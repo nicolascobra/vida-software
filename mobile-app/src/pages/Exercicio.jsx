@@ -8,6 +8,9 @@ const T = {
   glassBorder: 'rgba(255,255,255,0.90)',
   blur:        'blur(28px) saturate(200%)',
   ink:         '#0a0a0a',
+  qGreen:      '#16a34a',
+  qYellow:     '#ca8a04',
+  qRed:        '#dc2626',
   textSub:     '#525252',
   textMut:     '#a3a3a3',
   fontHead:    "'Syne', sans-serif",
@@ -27,7 +30,7 @@ const paraISO = (dataStr) => {
   return `${a}-${m}-${d}`;
 };
 
-const categoriasTreino = ['Costas', 'Tríceps', 'Bíceps', 'Perna', 'Peito', 'Ombro', 'Cardio', 'Full Body', 'Outro'];
+const CATEGORIAS = ['costas', 'triceps', 'biceps', 'perna', 'peito', 'ombro', 'cardio', 'full_body', 'outro'];
 
 const inputStyle = {
   width: '100%', minHeight: 48, padding: '14px 16px', background: 'rgba(255,255,255,0.8)',
@@ -53,19 +56,11 @@ export default function Exercicio() {
   const [status, setStatus] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const toggleCategoria = (catText) => {
-    // lowercase the payload string, strip accents if you want, but user simply used the string raw or lowercase
-    const catId = catText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(' ', '_');
-    
+  const toggleCategoria = (cat) => {
     setCategorias(prev => {
-      if (prev.includes(catId)) return prev.filter(c => c !== catId);
-      return [...prev, catId];
+      if (prev.includes(cat)) return prev.filter(c => c !== cat);
+      return [...prev, cat];
     });
-  };
-
-  const isSelected = (catText) => {
-    const catId = catText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(' ', '_');
-    return categorias.includes(catId);
   };
 
   const handleSubmit = async (e) => {
@@ -110,9 +105,9 @@ export default function Exercicio() {
         <label style={labelStyle}>Data</label>
         <input type="text" inputMode="numeric" placeholder="DD/MM/AAAA" maxLength={10} value={data} onChange={e => setData(formatarData(e.target.value))} style={inputStyle} required />
 
-        <label style={labelStyle}>Categoria (múltipla seleção)</label>
+        <label style={labelStyle}>Grupos musculares (múltipla seleção)</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-          {categoriasTreino.map(cat => (
+          {CATEGORIAS.map(cat => (
             <button 
               key={cat} 
               type="button" 
@@ -121,22 +116,36 @@ export default function Exercicio() {
                 padding: '8px 14px', 
                 borderRadius: 20, 
                 border: 'none', 
-                background: isSelected(cat) ? T.ink : 'rgba(255,255,255,0.5)', 
-                color: isSelected(cat) ? '#fff' : T.textSub, 
-                fontFamily: T.fontBody, fontSize: 13, fontWeight: 600
+                background: categorias.includes(cat) ? T.ink : 'rgba(255,255,255,0.5)', 
+                color: categorias.includes(cat) ? '#fff' : T.textSub, 
+                fontFamily: T.fontBody, fontSize: 13, fontWeight: 600,
+                textTransform: 'capitalize'
               }}
             >
-              {cat}
+              {cat.replace('_', ' ')}
             </button>
           ))}
         </div>
 
         <label style={labelStyle}>Qualidade</label>
-        <select value={qualidade} onChange={e => setQualidade(e.target.value)} style={inputStyle}>
-          <option value="abaixo_esperado">Abaixo do esperado</option>
-          <option value="medio">Médio</option>
-          <option value="acima_esperado">Acima do esperado</option>
-        </select>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+          {[
+            { key: 'abaixo_esperado', label: 'Abaixo', color: T.qRed },
+            { key: 'medio',           label: 'Médio',  color: T.qYellow },
+            { key: 'acima_esperado',  label: 'Acima',  color: T.qGreen },
+          ].map(({ key, label, color }) => (
+            <button key={key} type="button"
+              onClick={() => setQualidade(key)}
+              style={{
+                flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer',
+                fontFamily: T.fontBody, fontSize: 13, fontWeight: 600,
+                border: qualidade === key ? 'none' : `1px solid rgba(0,0,0,0.1)`,
+                background: qualidade === key ? color : 'rgba(255,255,255,0.5)',
+                color: qualidade === key ? '#fff' : T.textSub,
+                transition: 'all 0.14s ease',
+              }}>{label}</button>
+          ))}
+        </div>
 
         <label style={labelStyle}>Calorias Gastas (opcional)</label>
         <input type="number" placeholder="ex: 450" value={calorias} onChange={e => setCalorias(e.target.value)} style={inputStyle} />
