@@ -81,7 +81,27 @@ def listar_itens_usuario(
     data_fim: Optional[date] = Query(None),
     db: Session = Depends(get_db),
 ):
-    pass
+    q = db.query(RefeicaoDiaria).filter(RefeicaoDiaria.user_id == user_id)
+    if data_inicio:
+        q = q.filter(RefeicaoDiaria.data >= data_inicio)
+    if data_fim:
+        q = q.filter(RefeicaoDiaria.data <= data_fim)
+    refeicoes = q.all()
+    result = []
+    for ref in refeicoes:
+        itens = db.query(ItemRefeicao).filter(ItemRefeicao.refeicao_diaria_id == ref.id).all()
+        for item in itens:
+            result.append({
+                "id":          item.id,
+                "data":        str(ref.data),
+                "tipo":        item.tipo_refeicao,
+                "descricao":   item.alimento,
+                "calorias":    item.calorias,
+                "proteinas":   item.proteinas_g    or 0,
+                "carboidratos": item.carboidratos_g or 0,
+                "gorduras":    item.gorduras_g     or 0,
+            })
+    return result
 
 @router.post("/refeicao-item")
 def registrar_refeicao_item(payload: RefeicaoItemCreate, db: Session = Depends(get_db)):

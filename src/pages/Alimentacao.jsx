@@ -83,7 +83,8 @@ const sectionLabel = {
   color: T.textMut, textTransform: 'uppercase',
   letterSpacing: '0.1em', marginBottom: 12, display: 'block',
 }
-const heroLabel = { ...sectionLabel, color: 'rgba(255,255,255,0.32)', marginBottom: 8 }
+const heroLabel  = { ...sectionLabel, color: 'rgba(255,255,255,0.32)', marginBottom: 8 }
+const fieldLabel = { fontFamily: T.fontBody, fontSize: 12, fontWeight: 500, color: T.textSub, display: 'block', marginBottom: 5 }
 const inputStyle = {
   padding: '7px 10px', boxSizing: 'border-box',
   borderRadius: 7, border: '1px solid rgba(0,0,0,0.10)',
@@ -234,7 +235,7 @@ function ModalRefeicao({ onClose, onSave, enviando }) {
       style={{
         position: 'fixed', inset: 0, zIndex: 200,
         backdropFilter: 'blur(18px) saturate(160%)', WebkitBackdropFilter: 'blur(18px) saturate(160%)',
-        backgroundColor: 'rgba(200,220,200,0.45)',
+        backgroundColor: 'rgba(240,240,240,0.50)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32,
       }}
     >
@@ -246,56 +247,57 @@ function ModalRefeicao({ onClose, onSave, enviando }) {
           background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(28px) saturate(200%)',
           WebkitBackdropFilter: 'blur(28px) saturate(200%)',
           borderRadius: 18, border: '1px solid rgba(255,255,255,0.95)',
-          boxShadow: '0 24px 80px rgba(53,79,54,0.18), 0 2px 0 rgba(255,255,255,1) inset',
-          padding: '28px 32px', width: '100%', maxWidth: 440,
+          boxShadow: '0 24px 80px rgba(0,0,0,0.18), 0 2px 0 rgba(255,255,255,1) inset',
+          padding: '28px 32px', width: '100%', maxWidth: 460,
+          maxHeight: '85vh', overflowY: 'auto',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <span style={{ fontFamily: T.fontHead, fontSize: 17, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>Nova refeição</span>
           <button onClick={onClose} style={{
-            background: 'rgba(0,0,0,0.05)', border: `1px solid ${T.inkLt}`,
+            background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.10)',
             borderRadius: 6, width: 28, height: 28, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMut, fontSize: 16,
           }}>×</button>
         </div>
         <form onSubmit={e => { e.preventDefault(); onSave(form) }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
             <div>
-              <label style={{ ...sectionLabel, marginBottom: 5 }}>Data</label>
-              <input type="date" value={form.data} onChange={e => set('data', e.target.value)} style={modalInputStyle} />
+              <label style={fieldLabel}>Data</label>
+              <input type="date" value={form.data} onChange={e => set('data', e.target.value)} style={inputStyle} />
             </div>
             <div>
-              <label style={{ ...sectionLabel, marginBottom: 5 }}>Refeição</label>
-              <select value={form.tipo} onChange={e => set('tipo', e.target.value)} style={{ ...modalInputStyle, cursor: 'pointer' }}>
+              <label style={fieldLabel}>Refeição</label>
+              <select value={form.tipo} onChange={e => set('tipo', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
                 {TIPOS.map(t => <option key={t} value={t}>{TIPO_LABEL[t]}</option>)}
               </select>
             </div>
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ ...sectionLabel, marginBottom: 5 }}>Alimento / Descrição</label>
+          <div style={{ marginBottom: 14 }}>
+            <label style={fieldLabel}>Alimento / Descrição</label>
             <input value={form.descricao} onChange={e => set('descricao', e.target.value)}
-              placeholder="Ex: frango grelhado, arroz integral..." style={modalInputStyle} />
+              placeholder="Ex: frango grelhado, arroz integral..." style={inputStyle} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 22 }}>
             {[
-              { key: 'calorias',     label: 'Kcal',   color: T.ink  },
-              { key: 'proteinas',    label: 'Prot. g', color: NUT.prot },
-              { key: 'carboidratos', label: 'Carb. g', color: NUT.carb },
-              { key: 'gorduras',     label: 'Gord. g', color: NUT.fat  },
+              { key: 'calorias',     label: 'Kcal',    color: T.ink     },
+              { key: 'proteinas',    label: 'Prot. g',  color: NUT.prot  },
+              { key: 'carboidratos', label: 'Carb. g',  color: NUT.carb  },
+              { key: 'gorduras',     label: 'Gord. g',  color: NUT.fat   },
             ].map(({ key, label, color }) => (
               <div key={key}>
-                <label style={{ ...sectionLabel, marginBottom: 5, color }}>{label}</label>
+                <label style={{ ...fieldLabel, color }}>{label}</label>
                 <input type="number" min="0" value={form[key]} onChange={e => set(key, e.target.value)}
-                  placeholder="0" style={{ ...modalInputStyle, padding: '8px 8px' }} />
+                  placeholder="0" style={{ ...inputStyle, padding: '8px 8px' }} />
               </div>
             ))}
           </div>
           <motion.button type="submit" disabled={enviando || !form.descricao || !form.calorias}
-            whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.97 }}
             style={{
-              width: '100%', padding: '11px 0',
-              background: enviando ? T.caramelMd : T.ink,
-              border: 'none', borderRadius: 9, cursor: enviando ? 'wait' : 'pointer',
+              width: '100%', padding: '11px 0', border: 'none', borderRadius: 9,
+              background: (enviando || !form.descricao || !form.calorias) ? 'rgba(0,0,0,0.25)' : T.ink,
+              cursor: enviando ? 'wait' : 'pointer',
               color: '#fff', fontFamily: T.fontBody, fontSize: 13, fontWeight: 700,
             }}
           >{enviando ? 'Salvando…' : 'Salvar refeição'}</motion.button>
@@ -343,7 +345,16 @@ export default function Alimentacao() {
       const r = await api.get(`/alimentacao/itens-usuario/${userId}`, {
         params: { data_inicio: filterStart, data_fim: filterEnd },
       })
-      setRefeicoes(r.data)
+      setRefeicoes((r.data || []).map(item => ({
+        id:           item.id,
+        data:         item.data,
+        tipo:         item.tipo         || item.tipo_refeicao || '',
+        descricao:    item.descricao    || item.alimento       || '',
+        calorias:     item.calorias     || 0,
+        proteinas:    item.proteinas    ?? item.proteinas_g    ?? 0,
+        carboidratos: item.carboidratos ?? item.carboidratos_g ?? 0,
+        gorduras:     item.gorduras     ?? item.gorduras_g     ?? 0,
+      })))
     } catch(e) { console.error(e) }
     finally    { setLoading(false) }
   }

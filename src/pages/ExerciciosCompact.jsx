@@ -79,6 +79,14 @@ const sectionLabel = {
   letterSpacing: '0.1em', marginBottom: 12, display: 'block',
 }
 const heroLabel  = { ...sectionLabel, color: 'rgba(255,255,255,0.35)', marginBottom: 8 }
+const fieldLabel = { fontFamily: T.fontBody, fontSize: 12, fontWeight: 500, color: T.textSub, display: 'block', marginBottom: 5 }
+const inputSt    = {
+  width: '100%', padding: '8px 11px', boxSizing: 'border-box',
+  borderRadius: 7, border: '1px solid rgba(255,255,255,0.65)',
+  background: 'rgba(255,255,255,0.45)', backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)', color: T.text,
+  fontSize: 13, fontFamily: T.fontBody, outline: 'none',
+}
 
 // ─── Framer Motion configs ────────────────────────────────────────────────────
 
@@ -256,7 +264,7 @@ function DayDetailModal({ dayDetail, onClose }) {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: (t.calorias_gastas || t.observacoes) ? 6 : 0 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: T.ink, fontFamily: T.fontBody, textTransform: 'capitalize' }}>{t.categoria.replace('_', ' ')}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: T.ink, fontFamily: T.fontBody, textTransform: 'capitalize' }}>{(Array.isArray(t.categoria) ? t.categoria.join(', ') : t.categoria).replace(/_/g, ' ')}</span>
                   <span style={{ fontSize: 12, fontWeight: 600, color: QUAL_COR[t.qualidade], fontFamily: T.fontBody }}>{QUAL_LABEL[t.qualidade]}</span>
                 </div>
                 {t.calorias_gastas && <div style={{ fontSize: 12, color: T.textSub, fontFamily: T.fontBody }}>{t.calorias_gastas} kcal</div>}
@@ -271,6 +279,135 @@ function DayDetailModal({ dayDetail, onClose }) {
           background: 'transparent', color: T.textSub,
           fontSize: 13, fontFamily: T.fontBody, cursor: 'pointer',
         }}>Fechar</button>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ─── ModalTreino ──────────────────────────────────────────────────────────────
+
+function ModalTreino({ onClose, onSave, enviando }) {
+  const hoje = new Date().toISOString().split('T')[0]
+  const [form, setForm] = useState({
+    data: hoje, categorias: [], qualidade: 'medio', calorias: '', observacoes: '',
+  })
+
+  const toggleCat = (cat) => setForm(prev => ({
+    ...prev,
+    categorias: prev.categorias.includes(cat)
+      ? prev.categorias.filter(c => c !== cat)
+      : [...prev.categorias, cat],
+  }))
+
+  return (
+    <motion.div
+      key="modal-treino-bg"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }} onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        backdropFilter: 'blur(18px) saturate(160%)', WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+        backgroundColor: 'rgba(240,240,240,0.50)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32,
+      }}
+    >
+      <motion.div
+        initial={{ y: 28, scale: 0.93, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }}
+        exit={{ y: 12, scale: 0.97, opacity: 0 }} transition={springModal}
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(28px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(200%)',
+          borderRadius: 18, border: '1px solid rgba(255,255,255,0.95)',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.18), 0 2px 0 rgba(255,255,255,1) inset',
+          padding: '28px 32px', width: '100%', maxWidth: 460,
+          maxHeight: '85vh', overflowY: 'auto',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <span style={{ fontFamily: T.fontHead, fontSize: 17, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>Novo treino</span>
+          <button onClick={onClose} style={{
+            background: 'rgba(0,0,0,0.05)', border: `1px solid ${T.inkLt}`,
+            borderRadius: 6, width: 28, height: 28, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: T.textMut, fontSize: 16,
+          }}>×</button>
+        </div>
+
+        <form onSubmit={e => { e.preventDefault(); if (form.categorias.length > 0) onSave(form) }}>
+          <div style={{ marginBottom: 14 }}>
+            <label style={fieldLabel}>Data</label>
+            <input type="date" value={form.data}
+              onChange={e => setForm(f => ({ ...f, data: e.target.value }))}
+              style={inputSt} required />
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={fieldLabel}>Grupos musculares</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
+              {CATEGORIAS.map(cat => {
+                const active = form.categorias.includes(cat)
+                return (
+                  <button key={cat} type="button" onClick={() => toggleCat(cat)} style={{
+                    padding: '6px 12px', borderRadius: 7, cursor: 'pointer',
+                    fontFamily: T.fontBody, fontSize: 12, fontWeight: 600,
+                    border: active ? 'none' : `1px solid ${T.inkLt}`,
+                    background: active ? T.ink : 'rgba(255,255,255,0.45)',
+                    color: active ? '#fff' : T.textSub,
+                    textTransform: 'capitalize', transition: 'all 0.14s ease',
+                  }}>{cat.replace('_', ' ')}</button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={fieldLabel}>Qualidade</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[
+                { key: 'abaixo_esperado', label: 'Abaixo', color: T.qRed    },
+                { key: 'medio',           label: 'Médio',  color: T.qYellow },
+                { key: 'acima_esperado',  label: 'Acima',  color: T.qGreen  },
+              ].map(({ key, label, color }) => (
+                <button key={key} type="button"
+                  onClick={() => setForm(f => ({ ...f, qualidade: key }))}
+                  style={{
+                    flex: 1, padding: '8px 0', borderRadius: 7, cursor: 'pointer',
+                    fontFamily: T.fontBody, fontSize: 12, fontWeight: 600,
+                    border: form.qualidade === key ? 'none' : `1px solid ${T.inkLt}`,
+                    background: form.qualidade === key ? color : 'rgba(255,255,255,0.45)',
+                    color: form.qualidade === key ? '#fff' : T.textSub,
+                    transition: 'all 0.14s ease',
+                  }}>{label}</button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={fieldLabel}>Calorias gastas (opcional)</label>
+            <input type="number" min="0" placeholder="ex: 350"
+              value={form.calorias} onChange={e => setForm(f => ({ ...f, calorias: e.target.value }))}
+              style={inputSt} />
+          </div>
+
+          <div style={{ marginBottom: 22 }}>
+            <label style={fieldLabel}>Observações (opcional)</label>
+            <input type="text" placeholder="ex: foco em volume, PR no deadlift…"
+              value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))}
+              style={inputSt} />
+          </div>
+
+          <motion.button type="submit"
+            disabled={enviando || form.categorias.length === 0}
+            whileTap={{ scale: 0.97 }}
+            style={{
+              width: '100%', padding: '11px 0', border: 'none', borderRadius: 9,
+              background: (enviando || form.categorias.length === 0) ? 'rgba(0,0,0,0.25)' : T.ink,
+              color: '#fff', fontSize: 14, fontWeight: 700,
+              fontFamily: T.fontBody, cursor: (enviando || form.categorias.length === 0) ? 'default' : 'pointer',
+            }}
+          >{enviando ? 'Salvando…' : 'Salvar treino'}</motion.button>
+        </form>
       </motion.div>
     </motion.div>
   )
@@ -292,12 +429,14 @@ function ExerciciosCompact() {
   const [ano,           setAno]           = useState(hoje.getFullYear())
   const [filterStart,   setFilterStart]   = useState(`${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-01`)
   const [filterEnd,     setFilterEnd]     = useState(hoje.toISOString().split('T')[0])
-  const [expanded,      setExpanded]      = useState(null)
-  const [dayDetail,     setDayDetail]     = useState(null)
-  const [hoveredCat,    setHoveredCat]    = useState(null)
-  const [calMes,        setCalMes]        = useState(hoje.getMonth())
-  const [calAno,        setCalAno]        = useState(hoje.getFullYear())
-  const [erro,          setErro]          = useState('')
+  const [expanded,       setExpanded]       = useState(null)
+  const [dayDetail,      setDayDetail]      = useState(null)
+  const [hoveredCat,     setHoveredCat]     = useState(null)
+  const [calMes,         setCalMes]         = useState(hoje.getMonth())
+  const [calAno,         setCalAno]         = useState(hoje.getFullYear())
+  const [erro,           setErro]           = useState('')
+  const [modalTreino,    setModalTreino]    = useState(false)
+  const [enviandoTreino, setEnviandoTreino] = useState(false)
 
   useEffect(() => { carregarDados() }, [])
 
@@ -312,6 +451,23 @@ function ExerciciosCompact() {
     } catch {
       setErro('Não foi possível carregar os dados. O backend está rodando?')
     }
+  }
+
+  async function salvarTreino(form) {
+    setEnviandoTreino(true)
+    try {
+      await api.post('/exercicio/treino', {
+        user_id:          userId,
+        data:             form.data,
+        categoria:        form.categorias,
+        qualidade:        form.qualidade,
+        calorias_gastas:  form.calorias ? parseFloat(form.calorias) : null,
+        observacoes:      form.observacoes || null,
+      })
+      setModalTreino(false)
+      carregarDados()
+    } catch(e) { console.error(e) }
+    finally { setEnviandoTreino(false) }
   }
 
   const limiteStr = filterStart
@@ -363,9 +519,12 @@ function ExerciciosCompact() {
   const categoriaData = useMemo(() => {
     const mapa = {}
     filteredTreinos.forEach(t => {
-      if (!mapa[t.categoria]) mapa[t.categoria] = { categoria: t.categoria, count: 0, scoreTotal: 0 }
-      mapa[t.categoria].count++
-      mapa[t.categoria].scoreTotal += Q_SCORE[t.qualidade] || 2
+      const cats = Array.isArray(t.categoria) ? t.categoria : [t.categoria]
+      cats.forEach(cat => {
+        if (!mapa[cat]) mapa[cat] = { categoria: cat, count: 0, scoreTotal: 0 }
+        mapa[cat].count++
+        mapa[cat].scoreTotal += Q_SCORE[t.qualidade] || 2
+      })
     })
     return Object.values(mapa)
       .map(c => ({ ...c, mediaScore: c.scoreTotal / c.count }))
@@ -380,9 +539,12 @@ function ExerciciosCompact() {
   const qualPorCategoria = useMemo(() => {
     const mapa = {}
     filteredTreinos.forEach(t => {
-      if (!mapa[t.categoria]) mapa[t.categoria] = { acima_esperado: 0, medio: 0, abaixo_esperado: 0, total: 0 }
-      mapa[t.categoria][t.qualidade]++
-      mapa[t.categoria].total++
+      const cats = Array.isArray(t.categoria) ? t.categoria : [t.categoria]
+      cats.forEach(cat => {
+        if (!mapa[cat]) mapa[cat] = { acima_esperado: 0, medio: 0, abaixo_esperado: 0, total: 0 }
+        mapa[cat][t.qualidade]++
+        mapa[cat].total++
+      })
     })
     return mapa
   }, [filteredTreinos])
@@ -636,7 +798,7 @@ function ExerciciosCompact() {
           </div>
           <motion.button
             whileTap={{ scale: 0.96 }}
-            onClick={() => {}}
+            onClick={() => setModalTreino(true)}
             style={{
               background: T.ink, border: 'none', borderRadius: 7,
               padding: '7px 14px', cursor: 'pointer', color: '#fff',
@@ -989,6 +1151,17 @@ function ExerciciosCompact() {
       <AnimatePresence>
         {dayDetail && (
           <DayDetailModal key="day" dayDetail={dayDetail} onClose={() => setDayDetail(null)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {modalTreino && (
+          <ModalTreino
+            key="modal-treino"
+            onClose={() => setModalTreino(false)}
+            onSave={salvarTreino}
+            enviando={enviandoTreino}
+          />
         )}
       </AnimatePresence>
     </motion.div>
