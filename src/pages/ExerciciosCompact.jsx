@@ -554,7 +554,10 @@ function ExerciciosCompact() {
 
             {/* KPI principal: consistência */}
             <div>
-              <span style={heroLabel}>Consistência no período</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                <span style={{ ...heroLabel, marginBottom: 0 }}>Consistência no período</span>
+                <ExpandBtn onClick={() => setExpanded('consistencia')} dark />
+              </div>
               <p style={{ fontFamily: T.fontHead, fontSize: 32, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.04em' }}>
                 {consistencia.pct}%
               </p>
@@ -620,6 +623,16 @@ function ExerciciosCompact() {
               setFilterStart={setFilterStart} setFilterEnd={setFilterEnd}
               accentColor={T.ink} fontBody={T.fontBody}
             />
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={() => { setFilterStart(hojeStr); setFilterEnd(hojeStr) }}
+              style={{
+                background: 'none', border: `1px solid rgba(0,0,0,0.15)`,
+                borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
+                fontSize: 11, fontWeight: 600, fontFamily: T.fontBody,
+                color: T.textSub, flexShrink: 0,
+              }}
+            >Hoje</motion.button>
           </div>
           <motion.button
             whileTap={{ scale: 0.96 }}

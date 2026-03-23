@@ -43,10 +43,10 @@ function SharedTopbar() {
 
   return (
     <div style={{
-      background: 'rgba(218,218,218,0.94)',
+      background: 'rgba(255,255,255,0.92)',
       backdropFilter: 'blur(24px)',
       WebkitBackdropFilter: 'blur(24px)',
-      borderBottom: '1px solid rgba(200,200,200,0.60)',
+      borderBottom: '1px solid rgba(0,0,0,0.08)',
       padding: '0 20px', height: 52,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       position: 'sticky', top: 0, zIndex: 100,

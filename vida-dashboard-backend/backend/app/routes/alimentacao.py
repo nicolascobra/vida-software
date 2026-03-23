@@ -79,32 +79,7 @@ def listar_itens_usuario(
     user_id: str,
     data_inicio: Optional[date] = Query(None),
     data_fim: Optional[date] = Query(None),
-    db: Session = Depends(get_db),
-):
-    """Retorna itens de refeição achatados com a data do registro diário."""
-    q = (
-        db.query(ItemRefeicao, RefeicaoDiaria.data)
-        .join(RefeicaoDiaria, ItemRefeicao.refeicao_diaria_id == RefeicaoDiaria.id)
-        .filter(RefeicaoDiaria.user_id == user_id)
-    )
-    if data_inicio:
-        q = q.filter(RefeicaoDiaria.data >= data_inicio)
-    if data_fim:
-        q = q.filter(RefeicaoDiaria.data <= data_fim)
-    results = []
-    for item, data in q.order_by(RefeicaoDiaria.data.desc()).all():
-        results.append({
-            "id": item.id,
-            "data": str(data),
-            "tipo": item.tipo_refeicao,
-            "descricao": item.alimento,
-            "calorias": item.calorias,
-            "proteinas": item.proteinas_g or 0,
-            "carboidratos": item.carboidratos_g or 0,
-            "gorduras": item.gorduras_g or 0,
-        })
-    return results
-
+    db: Session = Depends(get_db),%
 
 @router.post("/refeicao-item")
 def registrar_refeicao_item(payload: RefeicaoItemCreate, db: Session = Depends(get_db)):

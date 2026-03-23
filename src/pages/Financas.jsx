@@ -109,6 +109,61 @@ const springSnappy = { type: 'spring', stiffness: 460, damping: 28 }
 const springFluid  = { type: 'spring', stiffness: 280, damping: 32 }
 const springModal  = { type: 'spring', stiffness: 360, damping: 28 }
 
+// ─── ExpandBtn / ExpandModal ──────────────────────────────────────────────────
+
+function ExpandBtn({ onClick }) {
+  return (
+    <button onClick={onClick} title="Expandir" style={{
+      background: 'rgba(0,0,0,0.05)', border: `1px solid ${T.inkLt}`,
+      borderRadius: 6, width: 26, height: 26, cursor: 'pointer',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: T.textSub, fontSize: 12, flexShrink: 0,
+    }}>⤢</button>
+  )
+}
+
+function ExpandModal({ title, onClose, children }) {
+  return (
+    <motion.div
+      key="expand-backdrop"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }} onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 300,
+        backdropFilter: 'blur(18px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+        backgroundColor: 'rgba(240,248,248,0.50)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32,
+      }}
+    >
+      <motion.div
+        initial={{ y: 28, scale: 0.93, opacity: 0 }}
+        animate={{ y: 0, scale: 1, opacity: 1 }}
+        exit={{ y: 12, scale: 0.97, opacity: 0 }}
+        transition={springModal} onClick={e => e.stopPropagation()}
+        style={{
+          background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(28px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(200%)',
+          borderRadius: 18, border: '1px solid rgba(255,255,255,0.95)',
+          boxShadow: '0 24px 80px rgba(0,68,68,0.18), 0 2px 0 rgba(255,255,255,1) inset',
+          padding: '24px 28px', width: '100%', maxWidth: 900,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <span style={{ fontFamily: T.fontHead, fontSize: 16, fontWeight: 700, color: T.teal, letterSpacing: '-0.02em' }}>{title}</span>
+          <button onClick={onClose} style={{
+            background: 'rgba(0,0,0,0.05)', border: `1px solid ${T.inkLt}`,
+            borderRadius: 6, width: 28, height: 28, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: T.textSub, fontSize: 16,
+          }}>×</button>
+        </div>
+        {children}
+      </motion.div>
+    </motion.div>
+  )
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(val) {
@@ -116,10 +171,10 @@ function fmt(val) {
 }
 
 function percentColor(pct) {
-  if (pct == null) return T.alertGood
-  if (pct >= 90)  return T.alertOver  // laranja
-  if (pct >= 70)  return T.alertWarn  // laranja escuro
-  return T.alertGood                  // teal vibrante
+  if (pct == null) return '#16a34a'
+  if (pct >= 100) return '#dc2626'   // vermelho — estourou
+  if (pct >= 75)  return '#d97706'   // amarelo — acelerado
+  return '#16a34a'                   // verde — folga
 }
 
 // Cor da tag de valor — laranja (saídas) e teal (entradas) com intensidade pelo valor
@@ -226,10 +281,17 @@ function Modal({ title, onClose, children, maxWidth = 460 }) {
 
 // ─── Barra de categoria ───────────────────────────────────────────────────────
 
-function CategoriaBar({ categoria, realizado, limite, percentual, selected, onClick }) {
+const RITMO_STATUS = {
+  folga:     { label: 'Folga',     color: '#16a34a' },
+  acelerado: { label: 'Acelerado', color: '#d97706' },
+  estouro:   { label: 'Estouro',  color: '#dc2626' },
+}
+
+function CategoriaBar({ categoria, realizado, limite, percentual, selected, onClick, status }) {
   const pct   = percentual ?? (limite ? Math.round(realizado / limite * 100) : null)
   const cor   = percentColor(pct)
   const label = CATEGORIAS_LABEL[categoria] || categoria
+  const st    = status ? RITMO_STATUS[status] : null
 
   return (
     <motion.div
@@ -238,22 +300,27 @@ function CategoriaBar({ categoria, realizado, limite, percentual, selected, onCl
       transition={springFluid}
       onClick={onClick}
       style={{
-        marginBottom: 13, cursor: 'pointer', padding: '8px 10px', borderRadius: 9,
+        marginBottom: 10, cursor: 'pointer', padding: '8px 10px', borderRadius: 9,
         background: selected ? 'rgba(0,68,68,0.07)' : 'transparent',
         border: selected ? `1px solid ${T.tealBorder}` : '1px solid transparent',
         transition: 'background 0.15s, border 0.15s',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'baseline' }}>
-        <span style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 600, color: selected ? T.teal : T.text }}>
-          {label}
-        </span>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {st && (
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.color, flexShrink: 0, display: 'inline-block' }} />
+          )}
+          <span style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 600, color: selected ? T.teal : T.text }}>
+            {label}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ fontFamily: T.fontBody, fontSize: 11, color: T.textMut }}>
             {fmt(realizado)}{limite ? ` / ${fmt(limite)}` : ''}
           </span>
           {pct != null && (
-            <span style={{ fontFamily: T.fontBody, fontSize: 10, fontWeight: 700, color: cor, minWidth: 30, textAlign: 'right' }}>
+            <span style={{ fontFamily: T.fontBody, fontSize: 10, fontWeight: 700, color: cor, minWidth: 28, textAlign: 'right' }}>
               {pct}%
             </span>
           )}
@@ -292,6 +359,7 @@ export default function Financas() {
   const [loading,    setLoading]    = useState(true)
 
   const [selectedCat, setSelectedCat] = useState(null)
+  const [expanded,    setExpanded]    = useState(null)
   const [dayDetail,   setDayDetail]   = useState(null) // { data, transacoes }
 
   // modais
@@ -302,7 +370,7 @@ export default function Financas() {
 
   const [form, setForm] = useState({
     data: hoje.toISOString().split('T')[0],
-    tipo: 'saida', valor: '', categoria: 'alimentacao', descricao: '', custo_fixo: false,
+    tipo: 'saida', valor: '', categoria: 'alimentacao', descricao: '', custo_fixo: false, tipo_pagamento: 'pix',
   })
 
   const [configForm, setConfigForm] = useState({ renda_mensal: '', limites: {} })
@@ -369,6 +437,11 @@ export default function Financas() {
     const limitChart   = selectedCat ? (limites[selectedCat] || 0) : totalLimite
     const filterFn     = t => t.tipo === 'saida' && (!selectedCat || t.categoria === selectedCat)
 
+    // Para o mês atual, parar em hoje; meses passados exibem o mês inteiro
+    const hj = new Date()
+    const isCurrentMonth = hj.getFullYear() === ano && (hj.getMonth() + 1) === mes
+    const lastDay = isCurrentMonth ? hj.getDate() : daysInMonth
+
     const byDay = {}
     transacoes.filter(filterFn).forEach(t => {
       const day = parseInt(t.data.split('-')[2])
@@ -376,7 +449,7 @@ export default function Financas() {
     })
 
     let cumul = 0
-    return Array.from({ length: daysInMonth }, (_, i) => {
+    return Array.from({ length: lastDay }, (_, i) => {
       const day = i + 1
       cumul += byDay[day] || 0
       return {
@@ -396,6 +469,29 @@ export default function Financas() {
     })),
   [categoriasComDados])
 
+  // Ritmo por categoria — ordena mais acelerado primeiro
+  const ritmoData = useMemo(() => {
+    const diasNoMes = new Date(ano, mes, 0).getDate()
+    const hj = new Date()
+    const isCurrentMonth = hj.getFullYear() === ano && (hj.getMonth() + 1) === mes
+    const diasDecorridos = Math.max(1, isCurrentMonth ? hj.getDate() : diasNoMes)
+    const diasRestantes  = Math.max(0, diasNoMes - diasDecorridos)
+
+    return categoriasComDados.map(c => {
+      const limite = c.limite_mensal || 0
+      const gasto  = c.realizado     || 0
+      const ritmoPrevisto   = limite > 0 ? limite / diasNoMes : 0
+      const ritmoAtual      = gasto / diasDecorridos
+      const ritmoNecessario = diasRestantes > 0 ? (limite - gasto) / diasRestantes : 0
+      const ritmoRatio      = ritmoPrevisto > 0 ? ritmoAtual / ritmoPrevisto : 0
+      const percentoExcedido = Math.round((ritmoRatio - 1) * 100)
+      const status = gasto > limite    ? 'estouro'
+                   : ritmoRatio > 1.0 ? 'acelerado'
+                   : 'folga'
+      return { ...c, diasNoMes, diasDecorridos, diasRestantes, ritmoPrevisto, ritmoAtual, ritmoNecessario, ritmoRatio, percentoExcedido, status }
+    }).sort((a, b) => b.ritmoRatio - a.ritmoRatio)
+  }, [categoriasComDados, mes, ano])
+
   const { totalFixo, totalVariavel } = useMemo(() => {
     let fix = 0, vari = 0
     transacoes.filter(t => t.tipo === 'saida').forEach(t => {
@@ -403,6 +499,18 @@ export default function Financas() {
     })
     return { totalFixo: fix, totalVariavel: vari }
   }, [transacoes])
+
+  const adesaoData = useMemo(() => {
+    const diasNoMes = new Date(ano, mes, 0).getDate()
+    const hj = new Date()
+    const isCurrentMonth = hj.getFullYear() === ano && (hj.getMonth() + 1) === mes
+    const diasDecorridos = Math.max(1, isCurrentMonth ? hj.getDate() : diasNoMes)
+    // orçamento variável = total de limites (aproximação: ainda não temos distinção fixo/variável em limites)
+    const escalonado = totalLimite * (diasDecorridos / diasNoMes)
+    // score: 1 se gastou <= escalonado, proporcional abaixo se passou
+    const score = escalonado > 0 ? Math.min(1, escalonado / Math.max(1, totalVariavel)) : 1
+    return { score, escalonado, diasDecorridos, diasNoMes }
+  }, [totalLimite, totalVariavel, mes, ano])
 
   const transacoesRecentes = useMemo(() =>
     [...transacoes].sort((a, b) => new Date(b.data) - new Date(a.data)).slice(0, 20),
@@ -468,7 +576,7 @@ export default function Financas() {
     try {
       await api.post('/financas/transacao', { ...form, user_id: userId, valor: parseFloat(form.valor) })
       setModalTransacao(false)
-      setForm({ data: hoje.toISOString().split('T')[0], tipo: 'saida', valor: '', categoria: 'alimentacao', descricao: '', custo_fixo: false })
+      setForm({ data: hoje.toISOString().split('T')[0], tipo: 'saida', valor: '', categoria: 'alimentacao', descricao: '', custo_fixo: false, tipo_pagamento: 'pix' })
       fetchTudo()
     } catch(e) { console.error(e) }
     finally    { setEnviando(false) }
@@ -532,38 +640,81 @@ export default function Financas() {
           transition={{ ...springFluid, delay: 0.05 }}
           style={{ ...heroCard, marginBottom: 14 }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1fr', gap: 24, alignItems: 'start' }}>
-            <div>
-              <span style={heroLabel}>Saldo do mês</span>
-              <p style={{ fontFamily: T.fontHead, fontSize: 30, fontWeight: 800, color: saldo >= 0 ? T.tealVibrant : '#f87171', margin: 0, letterSpacing: '-0.04em' }}>
-                {fmt(saldo)}
-              </p>
-            </div>
-            <div>
-              <span style={heroLabel}>Entradas</span>
-              <p style={{ fontFamily: T.fontHead, fontSize: 22, fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '-0.03em' }}>
-                {fmt(resumo?.total_entradas)}
-              </p>
-            </div>
-            <div>
-              <span style={heroLabel}>Saídas</span>
-              <p style={{ fontFamily: T.fontHead, fontSize: 22, fontWeight: 700, color: 'rgba(255,255,255,0.70)', margin: 0, letterSpacing: '-0.03em' }}>
-                {fmt(resumo?.total_saidas)}
-              </p>
-            </div>
-            <div>
-              <span style={heroLabel}>Composição</span>
-              <div style={{ display: 'flex', gap: 16, marginTop: 2 }}>
-                <div>
-                  <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fixo</span>
-                  <p style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.50)', margin: '2px 0 0' }}>{fmt(totalFixo)}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 28, alignItems: 'center' }}>
+
+            {/* Score ring */}
+            {(() => {
+              const r = 32, circ = 2 * Math.PI * r
+              const pct = adesaoData.score
+              const ringColor = pct >= 0.9 ? '#16a34a' : pct >= 0.7 ? '#d97706' : '#dc2626'
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}>
+                    <svg width="80" height="80" style={{ transform: 'rotate(-90deg)' }}>
+                      <circle cx="40" cy="40" r={r} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth={6} />
+                      <motion.circle
+                        cx="40" cy="40" r={r} fill="none"
+                        stroke={ringColor} strokeWidth={6}
+                        strokeLinecap="round"
+                        initial={{ strokeDashoffset: circ }}
+                        animate={{ strokeDashoffset: circ - circ * pct }}
+                        transition={{ duration: 1.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+                        style={{ strokeDasharray: circ }}
+                      />
+                    </svg>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontFamily: T.fontHead, fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em' }}>
+                        {Math.round(pct * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.12em', display: 'block', marginBottom: 3 }}>Adesão ao Plano</span>
+                    <p style={{ fontFamily: T.fontHead, fontSize: 20, fontWeight: 800, color: '#fff', margin: '0 0 6px', letterSpacing: '-0.03em' }}>Financeiro</p>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <div>
+                        <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.30)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Variável gasto</span>
+                        <p style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.80)', margin: '2px 0 0' }}>{fmt(totalVariavel)}</p>
+                      </div>
+                      <div>
+                        <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.30)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Escalonado hoje</span>
+                        <p style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.80)', margin: '2px 0 0' }}>{fmt(adesaoData.escalonado)}</p>
+                      </div>
+                      <div>
+                        <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fixo (excluído)</span>
+                        <p style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.38)', margin: '2px 0 0' }}>{fmt(totalFixo)}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span style={{ fontFamily: T.fontBody, fontSize: 9, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Variável</span>
-                  <p style={{ fontFamily: T.fontBody, fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.50)', margin: '2px 0 0' }}>{fmt(totalVariavel)}</p>
-                </div>
+              )
+            })()}
+
+            {/* Divisor */}
+            <div style={{ width: 1, height: 60, background: 'rgba(255,255,255,0.10)', justifySelf: 'center' }} />
+
+            {/* KPIs secundários */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
+              <div>
+                <span style={heroLabel}>Saldo</span>
+                <p style={{ fontFamily: T.fontHead, fontSize: 22, fontWeight: 800, color: saldo >= 0 ? T.tealVibrant : '#f87171', margin: 0, letterSpacing: '-0.03em' }}>
+                  {fmt(saldo)}
+                </p>
+              </div>
+              <div>
+                <span style={heroLabel}>Entradas</span>
+                <p style={{ fontFamily: T.fontHead, fontSize: 18, fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '-0.03em' }}>
+                  {fmt(resumo?.total_entradas)}
+                </p>
+              </div>
+              <div>
+                <span style={heroLabel}>Saídas</span>
+                <p style={{ fontFamily: T.fontHead, fontSize: 18, fontWeight: 700, color: 'rgba(255,255,255,0.65)', margin: 0, letterSpacing: '-0.03em' }}>
+                  {fmt(resumo?.total_saidas)}
+                </p>
               </div>
             </div>
+
           </div>
         </motion.div>
 
@@ -580,6 +731,16 @@ export default function Financas() {
               setFilterStart={setFilterStart} setFilterEnd={setFilterEnd}
               accentColor={T.teal} fontBody={T.fontBody}
             />
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={() => { setFilterStart(hojeStr); setFilterEnd(hojeStr) }}
+              style={{
+                background: 'none', border: `1px solid rgba(0,0,0,0.15)`,
+                borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
+                fontSize: 11, fontWeight: 600, fontFamily: T.fontBody,
+                color: T.textSub, flexShrink: 0,
+              }}
+            >Hoje</motion.button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <motion.button whileTap={{ scale: 0.92 }} onClick={openConfig} title="Configurações" style={{
@@ -620,9 +781,9 @@ export default function Financas() {
               </div>
               {loading
                 ? <p style={{ color: T.textMut, fontSize: 13 }}>Carregando…</p>
-                : categoriasComDados.length === 0
+                : ritmoData.length === 0
                   ? <p style={{ color: T.textMut, fontSize: 13 }}>Sem dados este mês.</p>
-                  : categoriasComDados.map(c => (
+                  : ritmoData.map(c => (
                       <CategoriaBar
                         key={c.categoria}
                         categoria={c.categoria}
@@ -630,10 +791,59 @@ export default function Financas() {
                         limite={c.limite_mensal}
                         percentual={c.percentual}
                         selected={selectedCat === c.categoria}
+                        status={c.limite_mensal > 0 ? c.status : null}
                         onClick={() => setSelectedCat(prev => prev === c.categoria ? null : c.categoria)}
                       />
                     ))
               }
+
+              {/* Painel de ritmo — aparece quando categoria selecionada */}
+              <AnimatePresence>
+                {selectedCat && (() => {
+                  const rd = ritmoData.find(r => r.categoria === selectedCat)
+                  if (!rd || !rd.limite_mensal) return null
+                  const st = RITMO_STATUS[rd.status]
+                  return (
+                    <motion.div key={selectedCat}
+                      initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
+                      style={{ overflow: 'hidden' }}>
+                      <div style={{ marginTop: 4, padding: '12px 14px', background: `${st.color}10`, border: `1px solid ${st.color}33`, borderRadius: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                          <span style={{ fontFamily: T.fontBody, fontSize: 11, fontWeight: 700, color: T.text }}>
+                            {CATEGORIAS_LABEL[selectedCat] || selectedCat} — ritmo
+                          </span>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: st.color, background: `${st.color}18`, border: `1px solid ${st.color}44`, borderRadius: 20, padding: '2px 8px' }}>
+                            {st.label}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                          {[
+                            { label: 'Ritmo previsto', val: fmt(rd.ritmoPrevisto) + '/dia', color: T.textSub },
+                            { label: 'Ritmo atual',    val: fmt(rd.ritmoAtual)    + '/dia', color: st.color },
+                            rd.diasRestantes > 0
+                              ? { label: 'Novo escalonado', val: fmt(Math.max(0, rd.ritmoNecessario)) + '/dia', color: rd.ritmoNecessario < 0 ? '#ef4444' : T.teal }
+                              : null,
+                          ].filter(Boolean).map(row => (
+                            <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: 10, color: T.textMut }}>{row.label}</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: row.color }}>{row.val}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <p style={{ fontFamily: T.fontBody, fontSize: 10, color: T.textMut, margin: 0, lineHeight: 1.5 }}>
+                          {rd.status === 'estouro'
+                            ? `Orçamento estourado em ${fmt(rd.realizado - rd.limite_mensal)}.`
+                            : rd.status === 'folga'
+                              ? `${fmt(rd.limite_mensal - rd.realizado)} restantes. Pode gastar ${fmt(rd.ritmoNecessario)}/dia.`
+                              : `${rd.percentoExcedido}% acima do ritmo. Nos próximos ${rd.diasRestantes} dias, máximo ${fmt(Math.max(0, rd.ritmoNecessario))}/dia.`
+                          }
+                        </p>
+                      </div>
+                    </motion.div>
+                  )
+                })()}
+              </AnimatePresence>
             </motion.div>
           </div>
 
@@ -648,17 +858,12 @@ export default function Financas() {
               transition={{ ...springFluid, delay: 0.11 }}
               style={card}
             >
-              <div style={{ marginBottom: 10 }}>
-                <span style={sectionLabel}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ ...sectionLabel, marginBottom: 0 }}>
                   Ritmo de gastos — {selectedCat ? (CATEGORIAS_LABEL[selectedCat] || selectedCat) : 'Total'}
                 </span>
-                <p style={{ fontFamily: T.fontBody, fontSize: 10, color: T.textMut, margin: 0, lineHeight: 1.4 }}>
-                  Linha sólida = realizado · Tracejada = ritmo esperado linear até o limite
-                </p>
+                <ExpandBtn onClick={() => setExpanded('ritmo')} />
               </div>
-              <p style={{ fontFamily: T.fontBody, fontSize: 10, color: T.tealVibrant, margin: '0 0 6px', cursor: 'default' }}>
-                Clique em um ponto para ver as transações do dia
-              </p>
               <ResponsiveContainer width="100%" height={160}>
                 <LineChart
                   data={cumulativeData}
@@ -692,7 +897,10 @@ export default function Financas() {
               transition={{ ...springFluid, delay: 0.13 }}
               style={card}
             >
-              <span style={sectionLabel}>Realizado vs Limite</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ ...sectionLabel, marginBottom: 0 }}>Realizado vs Limite</span>
+                <ExpandBtn onClick={() => setExpanded('barras')} />
+              </div>
               <ResponsiveContainer width="100%" height={170}>
                 <BarChart data={dadosBarras} barCategoryGap="30%" barGap={2} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
@@ -909,6 +1117,27 @@ export default function Financas() {
                 <label style={fieldLabel}>Descrição (opcional)</label>
                 <input type="text" placeholder="ex: mercado, aluguel…" value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} style={inputStyle} />
               </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={fieldLabel}>Forma de pagamento</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {[
+                    { key: 'pix',     label: 'Pix' },
+                    { key: 'dinheiro', label: 'Dinheiro' },
+                    { key: 'debito',  label: 'Débito' },
+                    { key: 'credito', label: 'Crédito' },
+                  ].map(op => (
+                    <button key={op.key} type="button"
+                      onClick={() => setForm(f => ({ ...f, tipo_pagamento: op.key }))}
+                      style={{
+                        flex: 1, minWidth: 64, padding: '7px 0', borderRadius: 7, cursor: 'pointer',
+                        fontFamily: T.fontBody, fontSize: 11, fontWeight: 600,
+                        border: form.tipo_pagamento === op.key ? 'none' : `1px solid ${T.inkLt}`,
+                        background: form.tipo_pagamento === op.key ? T.teal : 'rgba(255,255,255,0.45)',
+                        color: form.tipo_pagamento === op.key ? '#fff' : T.textSub,
+                      }}>{op.label}</button>
+                  ))}
+                </div>
+              </div>
               <div style={{ marginBottom: 22, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <input type="checkbox" id="custo_fixo" checked={form.custo_fixo} onChange={e => setForm(f => ({ ...f, custo_fixo: e.target.checked }))} style={{ accentColor: T.teal, width: 15, height: 15, cursor: 'pointer' }} />
                 <label htmlFor="custo_fixo" style={{ fontFamily: T.fontBody, fontSize: 13, color: T.textSub, cursor: 'pointer' }}>Custo fixo</label>
@@ -964,6 +1193,42 @@ export default function Financas() {
               </motion.button>
             </form>
           </Modal>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {expanded === 'ritmo' && (
+          <ExpandModal key="ritmo" title={`Ritmo de gastos — ${selectedCat ? (CATEGORIAS_LABEL[selectedCat] || selectedCat) : 'Total'}`} onClose={() => setExpanded(null)}>
+            <LineChart width={840} height={360} data={cumulativeData}
+              margin={{ top: 8, right: 8, bottom: 0, left: 0 }} style={{ cursor: 'crosshair' }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+              <XAxis dataKey="dia" tick={{ fontSize: 10, fontFamily: T.fontBody, fill: T.textMut }} axisLine={false} tickLine={false} interval={2} />
+              <YAxis tickFormatter={v => `${(v/1000).toFixed(0)}k`} tick={{ fontSize: 10, fontFamily: T.fontBody, fill: T.textMut }} axisLine={false} tickLine={false} width={36} />
+              <Tooltip content={<LineTooltip />} />
+              <Line dataKey="referencia" name="Esperado" stroke={T.neutralLt} strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
+              <Line dataKey="realizado" name="Realizado" stroke={T.tealVibrant} strokeWidth={2.5} dot={false} activeDot={{ r: 6, fill: T.tealVibrant, stroke: '#fff', strokeWidth: 2 }} />
+            </LineChart>
+          </ExpandModal>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {expanded === 'barras' && (
+          <ExpandModal key="barras" title="Realizado vs Limite por categoria" onClose={() => setExpanded(null)}>
+            <BarChart width={840} height={360} data={dadosBarras} barCategoryGap="30%" barGap={4} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fontFamily: T.fontBody, fill: T.textMut }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={v => `${(v/1000).toFixed(0)}k`} tick={{ fontSize: 10, fontFamily: T.fontBody, fill: T.textMut }} axisLine={false} tickLine={false} width={36} />
+              <Tooltip content={<BarTooltip />} />
+              <Bar dataKey="realizado" name="Realizado" radius={[4,4,0,0]}>
+                {dadosBarras.map((entry, i) => {
+                  const pct = entry.limite ? (entry.realizado / entry.limite * 100) : 0
+                  return <Cell key={i} fill={percentColor(pct)} />
+                })}
+              </Bar>
+              <Bar dataKey="limite" name="Limite" fill="rgba(0,68,68,0.10)" radius={[4,4,0,0]} />
+            </BarChart>
+          </ExpandModal>
         )}
       </AnimatePresence>
     </motion.div>

@@ -28,6 +28,13 @@ const MODULOS = [
     accent: '#004444',
     accentAlpha: 'rgba(0,68,68,0.07)',
   },
+  {
+    path: '/alimentacao',
+    label: 'Alimentação',
+    desc: 'Refeições, macros e adesão',
+    accent: '#354f36',
+    accentAlpha: 'rgba(53,79,54,0.07)',
+  },
 ]
 
 const springFluid = { type: 'spring', stiffness: 280, damping: 32 }
