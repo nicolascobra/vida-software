@@ -1,0 +1,112 @@
+=== ESTRUTURA DAS TABELAS ===
+| table_name              | column_name        | data_type                | udt_name    | is_nullable | column_default           |
+| ----------------------- | ------------------ | ------------------------ | ----------- | ----------- | ------------------------ |
+| centros_custo           | id                 | bigint                   | int8        | NO          | null                     |
+| centros_custo           | user_id            | text                     | text        | NO          | null                     |
+| centros_custo           | categoria          | text                     | text        | NO          | null                     |
+| centros_custo           | limite_mensal      | double precision         | float8      | NO          | null                     |
+| centros_custo           | criado_em          | timestamp with time zone | timestamptz | YES         | now()                    |
+| configuracao_financeira | id                 | bigint                   | int8        | NO          | null                     |
+| configuracao_financeira | user_id            | text                     | text        | NO          | null                     |
+| configuracao_financeira | renda_mensal       | double precision         | float8      | NO          | null                     |
+| configuracao_financeira | mes_referencia     | date                     | date        | NO          | null                     |
+| configuracao_financeira | criado_em          | timestamp with time zone | timestamptz | YES         | now()                    |
+| itens_refeicao          | id                 | bigint                   | int8        | NO          | null                     |
+| itens_refeicao          | refeicao_diaria_id | integer                  | int4        | YES         | null                     |
+| itens_refeicao          | tipo_refeicao      | text                     | text        | NO          | null                     |
+| itens_refeicao          | alimento           | text                     | text        | NO          | null                     |
+| itens_refeicao          | quantidade_g       | double precision         | float8      | NO          | null                     |
+| itens_refeicao          | calorias           | double precision         | float8      | NO          | null                     |
+| itens_refeicao          | proteinas_g        | double precision         | float8      | YES         | null                     |
+| itens_refeicao          | carboidratos_g     | double precision         | float8      | YES         | null                     |
+| itens_refeicao          | gorduras_g         | double precision         | float8      | YES         | null                     |
+| itens_refeicao          | criado_em          | timestamp with time zone | timestamptz | YES         | now()                    |
+| peso_semanal            | id                 | bigint                   | int8        | NO          | null                     |
+| peso_semanal            | user_id            | text                     | text        | NO          | null                     |
+| peso_semanal            | semana_inicio      | date                     | date        | NO          | null                     |
+| peso_semanal            | peso_kg            | double precision         | float8      | NO          | null                     |
+| peso_semanal            | criado_em          | timestamp with time zone | timestamptz | YES         | now()                    |
+| refeicoes_diarias       | id                 | bigint                   | int8        | NO          | null                     |
+| refeicoes_diarias       | user_id            | text                     | text        | NO          | null                     |
+| refeicoes_diarias       | data               | date                     | date        | NO          | null                     |
+| refeicoes_diarias       | desvio_plano       | boolean                  | bool        | NO          | false                    |
+| refeicoes_diarias       | observacoes_desvio | text                     | text        | YES         | null                     |
+| refeicoes_diarias       | criado_em          | timestamp with time zone | timestamptz | YES         | now()                    |
+| transacoes              | id                 | bigint                   | int8        | NO          | null                     |
+| transacoes              | user_id            | text                     | text        | NO          | null                     |
+| transacoes              | data               | date                     | date        | NO          | null                     |
+| transacoes              | tipo               | text                     | text        | NO          | null                     |
+| transacoes              | valor              | double precision         | float8      | NO          | null                     |
+| transacoes              | categoria          | text                     | text        | NO          | null                     |
+| transacoes              | descricao          | text                     | text        | YES         | null                     |
+| transacoes              | criado_em          | timestamp with time zone | timestamptz | YES         | now()                    |
+| transacoes              | custo_fixo         | boolean                  | bool        | NO          | false                    |
+| transacoes              | tipo_pagamento     | character varying        | varchar     | YES         | 'pix'::character varying |
+| treinos                 | id                 | bigint                   | int8        | NO          | null                     |
+| treinos                 | user_id            | text                     | text        | NO          | null                     |
+| treinos                 | data               | date                     | date        | NO          | null                     |
+| treinos                 | categoria          | ARRAY                    | _text       | NO          | null                     |
+| treinos                 | qualidade          | text                     | text        | NO          | null                     |
+| treinos                 | calorias_gastas    | double precision         | float8      | YES         | null                     |
+| treinos                 | observacoes        | text                     | text        | YES         | null                     |
+| treinos                 | criado_em          | timestamp with time zone | timestamptz | YES         | now()                    |
+
+=== CONSTRAINTS ===
+| table_name              | constraint_name                        | constraint_type | check_clause                                                                                                                                                                               |
+| ----------------------- | -------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| centros_custo           | 2200_17911_2_not_null                  | CHECK           | user_id IS NOT NULL                                                                                                                                                                        |
+| centros_custo           | 2200_17911_1_not_null                  | CHECK           | id IS NOT NULL                                                                                                                                                                             |
+| centros_custo           | centros_custo_pkey                     | PRIMARY KEY     | null                                                                                                                                                                                       |
+| centros_custo           | 2200_17911_3_not_null                  | CHECK           | categoria IS NOT NULL                                                                                                                                                                      |
+| centros_custo           | 2200_17911_4_not_null                  | CHECK           | limite_mensal IS NOT NULL                                                                                                                                                                  |
+| configuracao_financeira | 2200_17951_1_not_null                  | CHECK           | id IS NOT NULL                                                                                                                                                                             |
+| configuracao_financeira | 2200_17951_4_not_null                  | CHECK           | mes_referencia IS NOT NULL                                                                                                                                                                 |
+| configuracao_financeira | 2200_17951_3_not_null                  | CHECK           | renda_mensal IS NOT NULL                                                                                                                                                                   |
+| configuracao_financeira | 2200_17951_2_not_null                  | CHECK           | user_id IS NOT NULL                                                                                                                                                                        |
+| configuracao_financeira | configuracao_financeira_pkey           | PRIMARY KEY     | null                                                                                                                                                                                       |
+| itens_refeicao          | 2200_17887_6_not_null                  | CHECK           | calorias IS NOT NULL                                                                                                                                                                       |
+| itens_refeicao          | 2200_17887_5_not_null                  | CHECK           | quantidade_g IS NOT NULL                                                                                                                                                                   |
+| itens_refeicao          | 2200_17887_4_not_null                  | CHECK           | alimento IS NOT NULL                                                                                                                                                                       |
+| itens_refeicao          | 2200_17887_3_not_null                  | CHECK           | tipo_refeicao IS NOT NULL                                                                                                                                                                  |
+| itens_refeicao          | 2200_17887_1_not_null                  | CHECK           | id IS NOT NULL                                                                                                                                                                             |
+| itens_refeicao          | itens_refeicao_pkey                    | PRIMARY KEY     | null                                                                                                                                                                                       |
+| itens_refeicao          | itens_refeicao_refeicao_diaria_id_fkey | FOREIGN KEY     | null                                                                                                                                                                                       |
+| peso_semanal            | 2200_17866_3_not_null                  | CHECK           | semana_inicio IS NOT NULL                                                                                                                                                                  |
+| peso_semanal            | peso_semanal_pkey                      | PRIMARY KEY     | null                                                                                                                                                                                       |
+| peso_semanal            | 2200_17866_1_not_null                  | CHECK           | id IS NOT NULL                                                                                                                                                                             |
+| peso_semanal            | 2200_17866_2_not_null                  | CHECK           | user_id IS NOT NULL                                                                                                                                                                        |
+| peso_semanal            | 2200_17866_4_not_null                  | CHECK           | peso_kg IS NOT NULL                                                                                                                                                                        |
+| refeicoes_diarias       | 2200_17876_4_not_null                  | CHECK           | desvio_plano IS NOT NULL                                                                                                                                                                   |
+| refeicoes_diarias       | 2200_17876_3_not_null                  | CHECK           | data IS NOT NULL                                                                                                                                                                           |
+| refeicoes_diarias       | 2200_17876_2_not_null                  | CHECK           | user_id IS NOT NULL                                                                                                                                                                        |
+| refeicoes_diarias       | 2200_17876_1_not_null                  | CHECK           | id IS NOT NULL                                                                                                                                                                             |
+| refeicoes_diarias       | refeicoes_diarias_pkey                 | PRIMARY KEY     | null                                                                                                                                                                                       |
+| transacoes              | 2200_17901_4_not_null                  | CHECK           | tipo IS NOT NULL                                                                                                                                                                           |
+| transacoes              | 2200_17901_5_not_null                  | CHECK           | valor IS NOT NULL                                                                                                                                                                          |
+| transacoes              | 2200_17901_6_not_null                  | CHECK           | categoria IS NOT NULL                                                                                                                                                                      |
+| transacoes              | transacoes_pkey                        | PRIMARY KEY     | null                                                                                                                                                                                       |
+| transacoes              | transacoes_categoria_check             | CHECK           | (categoria = ANY (ARRAY['alimentacao'::text, 'saude'::text, 'transporte'::text, 'lazer'::text, 'moradia'::text, 'educacao'::text, 'investimento'::text, 'salario'::text, 'outros'::text])) |
+| transacoes              | 2200_17901_1_not_null                  | CHECK           | id IS NOT NULL                                                                                                                                                                             |
+| transacoes              | 2200_17901_9_not_null                  | CHECK           | custo_fixo IS NOT NULL                                                                                                                                                                     |
+| transacoes              | 2200_17901_2_not_null                  | CHECK           | user_id IS NOT NULL                                                                                                                                                                        |
+| transacoes              | 2200_17901_3_not_null                  | CHECK           | data IS NOT NULL                                                                                                                                                                           |
+| treinos                 | treinos_pkey                           | PRIMARY KEY     | null                                                                                                                                                                                       |
+| treinos                 | 2200_17856_5_not_null                  | CHECK           | qualidade IS NOT NULL                                                                                                                                                                      |
+| treinos                 | 2200_17856_4_not_null                  | CHECK           | categoria IS NOT NULL                                                                                                                                                                      |
+| treinos                 | 2200_17856_3_not_null                  | CHECK           | data IS NOT NULL                                                                                                                                                                           |
+| treinos                 | 2200_17856_2_not_null                  | CHECK           | user_id IS NOT NULL                                                                                                                                                                        |
+| treinos                 | 2200_17856_1_not_null                  | CHECK           | id IS NOT NULL                                                                                                                                                                             |
+
+=== AMOSTRA TREINOS ===
+| id  | categoria              | dimensoes | tipo   |
+| --- | ---------------------- | --------- | ------ |
+| 156 | ["full_body","cardio"] | 1         | text[] |
+| 155 | ["cardio","full_body"] | 1         | text[] |
+| 77  | ["full_body"]          | 1         | text[] |
+| 78  | ["peito"]              | 1         | text[] |
+| 79  | ["peito"]              | 1         | text[] |
+| 80  | ["peito"]              | 1         | text[] |
+| 81  | ["biceps"]             | 1         | text[] |
+| 82  | ["peito"]              | 1         | text[] |
+| 83  | ["full_body"]          | 1         | text[] |
+| 84  | ["peito"]              | 1         | text[] |
