@@ -79,7 +79,9 @@ def listar_itens_usuario(
     user_id: str,
     data_inicio: Optional[date] = Query(None),
     data_fim: Optional[date] = Query(None),
-    db: Session = Depends(get_db),%
+    db: Session = Depends(get_db),
+):
+    pass
 
 @router.post("/refeicao-item")
 def registrar_refeicao_item(payload: RefeicaoItemCreate, db: Session = Depends(get_db)):
