@@ -34,3 +34,7 @@ app.include_router(nota_fiscal.router, prefix="/nota-fiscal", tags=["Nota Fiscal
 @app.get("/")
 def read_root():
     return {"status": "ok", "projeto": "Vida Dashboard"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
