@@ -9,18 +9,23 @@ import DateRangeSlider from '../components/DateRangeSlider'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const TIPOS = ['cafe', 'almoco', 'lanche', 'jantar', 'outro']
+const TIPOS = ['pre_treino','cafe_manha','lanche_manha','almoco','lanche_tarde','jantar','ceia']
 const TIPO_LABEL = {
-  cafe: 'Café da manhã', cafe_da_manha: 'Café da manhã', pre_treino: 'Pré-treino',
-  almoco: 'Almoço',
-  lanche: 'Lanche', lanche_manha: 'Lanche manhã', lanche_tarde: 'Lanche tarde',
-  jantar: 'Jantar', janta: 'Jantar', ceia: 'Ceia',
-  outro: 'Outro',
+  pre_treino:   'Pré-treino',
+  cafe_manha:   'Café da manhã',
+  lanche_manha: 'Lanche da manhã',
+  almoco:       'Almoço',
+  lanche_tarde: 'Lanche da tarde',
+  jantar:       'Jantar',
+  ceia:         'Ceia',
+  // legado (compatibilidade com dados antigos)
+  cafe: 'Café da manhã', cafe_da_manha: 'Café da manhã',
+  lanche: 'Lanche', janta: 'Jantar', outro: 'Outro',
 }
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
-const TIPO_ORDER  = ['pre_treino','cafe_da_manha','cafe','lanche_manha','almoco','lanche','lanche_tarde','jantar','janta','ceia','outro']
+const TIPO_ORDER  = ['pre_treino','cafe_manha','cafe_da_manha','cafe','lanche_manha','almoco','lanche_tarde','lanche','jantar','janta','ceia','outro']
 
 // ─── Nutrient palette ─────────────────────────────────────────────────────────
 
@@ -221,88 +226,413 @@ function ChartTooltip({ active, payload, label: lbl, unit = '' }) {
 
 // ─── Modal de refeição ────────────────────────────────────────────────────────
 
-function ModalRefeicao({ onClose, onSave, enviando }) {
-  const hoje = new Date().toISOString().split('T')[0]
+// ─── Modal: Novo Alimento (tabela nutricional) ────────────────────────────────
+
+function ModalNovoAlimento({ onClose, onSave }) {
   const [form, setForm] = useState({
-    data: hoje, tipo: 'almoco', descricao: '', calorias: '',
-    proteinas: '', carboidratos: '', gorduras: '',
+    alimento: '', descricao_unidade: '1 unidade', kcal: '', proteina: '', carboidrato: '', gordura: '',
   })
-  const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
+  const [salvando, setSalvando] = useState(false)
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.alimento || !form.kcal) return
+    setSalvando(true)
+    try {
+      const novo = await onSave({
+        alimento: form.alimento,
+        descricao_unidade: form.descricao_unidade || '1 unidade',
+        kcal:        parseFloat(form.kcal)        || 0,
+        proteina:    parseFloat(form.proteina)    || 0,
+        carboidrato: parseFloat(form.carboidrato) || 0,
+        gordura:     parseFloat(form.gordura)     || 0,
+      })
+      onClose(novo)
+    } catch(e) { console.error(e) }
+    finally { setSalvando(false) }
+  }
+
   return (
     <motion.div
-      key="modal-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      transition={{ duration: 0.18 }} onClick={onClose}
+      key="modal-novo-bg"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.14 }} onClick={() => onClose(null)}
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        backdropFilter: 'blur(18px) saturate(160%)', WebkitBackdropFilter: 'blur(18px) saturate(160%)',
-        backgroundColor: 'rgba(240,240,240,0.50)',
+        position: 'fixed', inset: 0, zIndex: 300,
+        backdropFilter: 'blur(8px) saturate(140%)', WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+        backgroundColor: 'rgba(200,200,200,0.40)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32,
       }}
+    >
+      <motion.div
+        initial={{ y: 20, scale: 0.95, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }}
+        exit={{ y: 10, scale: 0.97, opacity: 0 }} transition={springModal}
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(28px)',
+          borderRadius: 16, border: '1px solid rgba(255,255,255,0.95)',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          padding: '24px 28px', width: '100%', maxWidth: 400,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <span style={{ fontFamily: T.fontHead, fontSize: 15, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>Novo alimento</span>
+          <button onClick={() => onClose(null)} style={{
+            background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.10)',
+            borderRadius: 6, width: 26, height: 26, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMut, fontSize: 15,
+          }}>×</button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 12 }}>
+            <label style={fieldLabel}>Nome do alimento</label>
+            <input value={form.alimento} onChange={e => set('alimento', e.target.value)}
+              placeholder="ex: Frango grelhado" style={inputStyle} required />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={fieldLabel}>Descrição da unidade</label>
+            <input value={form.descricao_unidade} onChange={e => set('descricao_unidade', e.target.value)}
+              placeholder="ex: 100g, 1 unidade, 1 colher" style={inputStyle} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
+            {[
+              { key: 'kcal',        label: 'Kcal',    color: T.ink    },
+              { key: 'proteina',    label: 'Prot. g',  color: NUT.prot },
+              { key: 'carboidrato', label: 'Carb. g',  color: NUT.carb },
+              { key: 'gordura',     label: 'Gord. g',  color: NUT.fat  },
+            ].map(({ key, label, color }) => (
+              <div key={key}>
+                <label style={{ ...fieldLabel, color, fontSize: 10 }}>{label}</label>
+                <input type="number" min="0" step="0.1" value={form[key]}
+                  onChange={e => set(key, e.target.value)} placeholder="0"
+                  style={{ ...inputStyle, padding: '7px 7px', fontSize: 12 }} />
+              </div>
+            ))}
+          </div>
+          <motion.button type="submit" disabled={salvando || !form.alimento || !form.kcal}
+            whileTap={{ scale: 0.97 }}
+            style={{
+              width: '100%', padding: '10px 0', border: 'none', borderRadius: 8,
+              background: (salvando || !form.alimento || !form.kcal) ? 'rgba(0,0,0,0.18)' : T.ink,
+              color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: T.fontBody,
+              cursor: (salvando || !form.alimento || !form.kcal) ? 'default' : 'pointer',
+            }}>{salvando ? 'Salvando…' : 'Adicionar à tabela'}</motion.button>
+        </form>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ─── Modal: Nova Refeição (fluxo em 2 etapas) ─────────────────────────────────
+
+function ModalRefeicao({ onClose, onSave, enviando, tabela, onNovoAlimento }) {
+  const hoje = new Date().toISOString().split('T')[0]
+  const [step,          setStep]          = useState(1)
+  const [data,          setData]          = useState(hoje)
+  const [tipo,          setTipo]          = useState('')
+  const [selectedFoods, setSelectedFoods] = useState({})  // { id: qty }
+  const [search,        setSearch]        = useState('')
+  const [modalNovo,     setModalNovo]     = useState(false)
+
+  const filteredTabela = useMemo(() =>
+    tabela.filter(t => t.alimento.toLowerCase().includes(search.toLowerCase())),
+  [tabela, search])
+
+  const totais = useMemo(() =>
+    Object.entries(selectedFoods).reduce((acc, [id, qty]) => {
+      const item = tabela.find(t => t.id === parseInt(id))
+      if (!item || qty === 0) return acc
+      return {
+        kcal: acc.kcal + item.kcal        * qty,
+        prot: acc.prot + item.proteina    * qty,
+        carb: acc.carb + item.carboidrato * qty,
+        fat:  acc.fat  + item.gordura     * qty,
+      }
+    }, { kcal: 0, prot: 0, carb: 0, fat: 0 }),
+  [selectedFoods, tabela])
+
+  const itemsCount = Object.values(selectedFoods).filter(q => q > 0).length
+
+  function setQty(id, delta) {
+    setSelectedFoods(prev => {
+      const current = prev[id] || 0
+      const next = Math.max(0, current + delta)
+      if (next === 0) { const { [id]: _, ...rest } = prev; return rest }
+      return { ...prev, [id]: next }
+    })
+  }
+
+  async function handleSave() {
+    const itens = Object.entries(selectedFoods)
+      .filter(([, qty]) => qty > 0)
+      .map(([id, qty]) => {
+        const item = tabela.find(t => t.id === parseInt(id))
+        return {
+          tabela_nutricional_id: parseInt(id),
+          alimento:    item.alimento,
+          quantidade:  qty,
+          calorias:    Math.round(item.kcal        * qty),
+          proteinas:   Math.round(item.proteina    * qty),
+          carboidratos: Math.round(item.carboidrato * qty),
+          gorduras:    Math.round(item.gordura     * qty),
+        }
+      })
+    await onSave({ data, tipo, itens })
+  }
+
+  const TIPO_ICON = {
+    pre_treino: '⚡', cafe_manha: '☕', lanche_manha: '🍎',
+    almoco: '🍽', lanche_tarde: '🥪', jantar: '🌙', ceia: '🌛',
+  }
+
+  const backdropStyle = {
+    position: 'fixed', inset: 0, zIndex: 200,
+    backdropFilter: 'blur(18px) saturate(160%)', WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+    backgroundColor: 'rgba(240,240,240,0.50)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+  }
+
+  const cardStyle = {
+    background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(28px) saturate(200%)',
+    WebkitBackdropFilter: 'blur(28px) saturate(200%)',
+    borderRadius: 18, border: '1px solid rgba(255,255,255,0.95)',
+    boxShadow: '0 24px 80px rgba(0,0,0,0.18), 0 2px 0 rgba(255,255,255,1) inset',
+    padding: '28px 32px', width: '100%',
+  }
+
+  const closeBtn = (
+    <button onClick={onClose} style={{
+      background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.10)',
+      borderRadius: 6, width: 28, height: 28, cursor: 'pointer',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMut, fontSize: 16,
+    }}>×</button>
+  )
+
+  return (
+    <motion.div
+      key="modal-ref-bg"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }} onClick={onClose}
+      style={backdropStyle}
     >
       <motion.div
         initial={{ y: 28, scale: 0.93, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }}
         exit={{ y: 12, scale: 0.97, opacity: 0 }} transition={springModal}
         onClick={e => e.stopPropagation()}
-        style={{
-          background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(28px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(28px) saturate(200%)',
-          borderRadius: 18, border: '1px solid rgba(255,255,255,0.95)',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.18), 0 2px 0 rgba(255,255,255,1) inset',
-          padding: '28px 32px', width: '100%', maxWidth: 460,
-          maxHeight: '85vh', overflowY: 'auto',
-        }}
+        style={{ ...cardStyle, maxWidth: step === 1 ? 480 : 540, maxHeight: '88vh', overflowY: 'auto' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <span style={{ fontFamily: T.fontHead, fontSize: 17, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>Nova refeição</span>
-          <button onClick={onClose} style={{
-            background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.10)',
-            borderRadius: 6, width: 28, height: 28, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMut, fontSize: 16,
-          }}>×</button>
-        </div>
-        <form onSubmit={e => { e.preventDefault(); onSave(form) }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-            <div>
+        {/* ── Etapa 1: data + tipo ── */}
+        {step === 1 && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <span style={{ fontFamily: T.fontHead, fontSize: 17, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>Nova refeição</span>
+              {closeBtn}
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
               <label style={fieldLabel}>Data</label>
-              <input type="date" value={form.data} onChange={e => set('data', e.target.value)} style={inputStyle} />
+              <input type="date" value={data} onChange={e => setData(e.target.value)} style={inputStyle} />
             </div>
-            <div>
-              <label style={fieldLabel}>Refeição</label>
-              <select value={form.tipo} onChange={e => set('tipo', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                {TIPOS.map(t => <option key={t} value={t}>{TIPO_LABEL[t]}</option>)}
-              </select>
-            </div>
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={fieldLabel}>Alimento / Descrição</label>
-            <input value={form.descricao} onChange={e => set('descricao', e.target.value)}
-              placeholder="Ex: frango grelhado, arroz integral..." style={inputStyle} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 22 }}>
-            {[
-              { key: 'calorias',     label: 'Kcal',    color: T.ink     },
-              { key: 'proteinas',    label: 'Prot. g',  color: NUT.prot  },
-              { key: 'carboidratos', label: 'Carb. g',  color: NUT.carb  },
-              { key: 'gorduras',     label: 'Gord. g',  color: NUT.fat   },
-            ].map(({ key, label, color }) => (
-              <div key={key}>
-                <label style={{ ...fieldLabel, color }}>{label}</label>
-                <input type="number" min="0" value={form[key]} onChange={e => set(key, e.target.value)}
-                  placeholder="0" style={{ ...inputStyle, padding: '8px 8px' }} />
+
+            <div style={{ marginBottom: 24 }}>
+              <label style={fieldLabel}>Qual refeição?</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 2 }}>
+                {TIPOS.map(t => {
+                  const active = tipo === t
+                  return (
+                    <motion.button key={t} type="button"
+                      whileTap={{ scale: 0.94 }}
+                      onClick={() => setTipo(t)}
+                      style={{
+                        padding: '12px 8px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
+                        border: active ? 'none' : `1px solid rgba(0,0,0,0.10)`,
+                        background: active ? T.ink : 'rgba(255,255,255,0.55)',
+                        transition: 'all 0.14s ease',
+                      }}
+                    >
+                      <div style={{ fontSize: 18, marginBottom: 4 }}>{TIPO_ICON[t]}</div>
+                      <div style={{
+                        fontFamily: T.fontBody, fontSize: 10, fontWeight: 700,
+                        color: active ? '#fff' : T.textSub,
+                        letterSpacing: '0.02em',
+                        textTransform: 'uppercase',
+                      }}>{TIPO_LABEL[t]}</div>
+                    </motion.button>
+                  )
+                })}
               </div>
-            ))}
-          </div>
-          <motion.button type="submit" disabled={enviando || !form.descricao || !form.calorias}
-            whileTap={{ scale: 0.97 }}
-            style={{
-              width: '100%', padding: '11px 0', border: 'none', borderRadius: 9,
-              background: (enviando || !form.descricao || !form.calorias) ? 'rgba(0,0,0,0.25)' : T.ink,
-              cursor: enviando ? 'wait' : 'pointer',
-              color: '#fff', fontFamily: T.fontBody, fontSize: 13, fontWeight: 700,
-            }}
-          >{enviando ? 'Salvando…' : 'Salvar refeição'}</motion.button>
-        </form>
+            </div>
+
+            <motion.button
+              disabled={!tipo}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setStep(2)}
+              style={{
+                width: '100%', padding: '11px 0', border: 'none', borderRadius: 9,
+                background: tipo ? T.ink : 'rgba(0,0,0,0.18)',
+                color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: T.fontBody,
+                cursor: tipo ? 'pointer' : 'default',
+              }}
+            >
+              {tipo ? `Próximo — ${TIPO_LABEL[tipo]}` : 'Selecione uma refeição'}
+            </motion.button>
+          </>
+        )}
+
+        {/* ── Etapa 2: selecionar alimentos ── */}
+        {step === 2 && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button onClick={() => setStep(1)} style={{
+                  background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.10)',
+                  borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
+                  fontFamily: T.fontBody, fontSize: 12, color: T.textSub,
+                }}>← Voltar</button>
+                <span style={{ fontFamily: T.fontHead, fontSize: 15, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>
+                  {TIPO_ICON[tipo]} {TIPO_LABEL[tipo]}
+                </span>
+              </div>
+              {closeBtn}
+            </div>
+
+            {/* Busca */}
+            <div style={{ position: 'relative', marginBottom: 14 }}>
+              <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: T.textMut }}>🔍</span>
+              <input
+                type="text" placeholder="Buscar alimento…"
+                value={search} onChange={e => setSearch(e.target.value)}
+                style={{ ...inputStyle, paddingLeft: 34 }}
+              />
+            </div>
+
+            {/* Lista de alimentos */}
+            <div style={{ maxHeight: 280, overflowY: 'auto', marginBottom: 14 }}>
+              {filteredTabela.length === 0 ? (
+                <p style={{ fontFamily: T.fontBody, fontSize: 13, color: T.textMut, textAlign: 'center', padding: '20px 0', margin: 0 }}>
+                  {tabela.length === 0 ? 'Tabela nutricional vazia. Adicione alimentos com o botão abaixo.' : 'Nenhum resultado para a busca.'}
+                </p>
+              ) : filteredTabela.map(item => {
+                const qty = selectedFoods[item.id] || 0
+                const selected = qty > 0
+                return (
+                  <div key={item.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '9px 10px', borderRadius: 9, marginBottom: 5,
+                    background: selected ? 'rgba(53,79,54,0.07)' : 'rgba(0,0,0,0.025)',
+                    border: selected ? `1px solid ${T.inkLt}` : '1px solid transparent',
+                    transition: 'all 0.13s ease',
+                  }}>
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
+                      <div style={{ fontFamily: T.fontBody, fontSize: 13, fontWeight: selected ? 600 : 400, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.alimento}
+                      </div>
+                      <div style={{ fontFamily: T.fontBody, fontSize: 10, color: T.textMut, marginTop: 1 }}>
+                        {Math.round(item.kcal)} kcal · {item.descricao_unidade}
+                        {item.proteina > 0 && <span style={{ color: NUT.prot }}> · {Math.round(item.proteina)}g prot</span>}
+                      </div>
+                    </div>
+
+                    {/* Quantidade */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                      <motion.button whileTap={{ scale: 0.85 }} onClick={() => setQty(item.id, -1)}
+                        style={{
+                          width: 26, height: 26, borderRadius: 6, border: '1px solid rgba(0,0,0,0.14)',
+                          background: selected ? T.ink : 'rgba(255,255,255,0.8)',
+                          color: selected ? '#fff' : T.textMut,
+                          cursor: selected ? 'pointer' : 'default',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 16, fontWeight: 300,
+                        }}
+                      >−</motion.button>
+                      <span style={{
+                        fontFamily: T.fontBody, fontSize: 13, fontWeight: 700,
+                        color: selected ? T.ink : T.textMut, width: 20, textAlign: 'center',
+                      }}>{qty}</span>
+                      <motion.button whileTap={{ scale: 0.85 }} onClick={() => setQty(item.id, +1)}
+                        style={{
+                          width: 26, height: 26, borderRadius: 6, border: 'none',
+                          background: T.ink, color: '#fff',
+                          cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 16, fontWeight: 300,
+                        }}
+                      >+</motion.button>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* Botão + Outro */}
+              <button onClick={() => setModalNovo(true)} style={{
+                width: '100%', padding: '9px 0', marginTop: 6, borderRadius: 9,
+                border: `1.5px dashed ${T.inkLt}`, background: 'transparent',
+                fontFamily: T.fontBody, fontSize: 12, fontWeight: 600,
+                color: T.textSub, cursor: 'pointer',
+              }}>
+                + Outro alimento (adicionar à tabela)
+              </button>
+            </div>
+
+            {/* Total selecionado */}
+            <div style={{
+              background: 'rgba(53,79,54,0.06)', borderRadius: 10,
+              padding: '10px 14px', marginBottom: 16,
+              border: `1px solid ${T.inkLt}`,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                <span style={{ fontFamily: T.fontBody, fontSize: 11, fontWeight: 600, color: T.textSub }}>
+                  Total selecionado{itemsCount > 0 ? ` (${itemsCount} item${itemsCount > 1 ? 's' : ''})` : ''}
+                </span>
+                <span style={{ fontFamily: T.fontHead, fontSize: 16, fontWeight: 800, color: T.ink, letterSpacing: '-0.03em' }}>
+                  {Math.round(totais.kcal)} <span style={{ fontSize: 10, fontWeight: 400, color: T.textMut }}>kcal</span>
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 14 }}>
+                {[
+                  { label: 'Prot',  val: totais.prot, color: NUT.protHero },
+                  { label: 'Carb',  val: totais.carb, color: NUT.carbHero },
+                  { label: 'Gord',  val: totais.fat,  color: NUT.fatHero  },
+                ].map(({ label, val, color }) => (
+                  <div key={label}>
+                    <span style={{ fontFamily: T.fontBody, fontSize: 11, fontWeight: 700, color }}>{Math.round(val)}g</span>
+                    <span style={{ fontFamily: T.fontBody, fontSize: 9, color: T.textMut, marginLeft: 3 }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <motion.button
+              disabled={enviando || itemsCount === 0}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleSave}
+              style={{
+                width: '100%', padding: '11px 0', border: 'none', borderRadius: 9,
+                background: (enviando || itemsCount === 0) ? 'rgba(0,0,0,0.18)' : T.ink,
+                color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: T.fontBody,
+                cursor: (enviando || itemsCount === 0) ? 'default' : 'pointer',
+              }}
+            >{enviando ? 'Salvando…' : 'Salvar refeição'}</motion.button>
+          </>
+        )}
       </motion.div>
+
+      {/* Sub-modal: novo alimento */}
+      <AnimatePresence>
+        {modalNovo && (
+          <ModalNovoAlimento
+            key="modal-novo"
+            onClose={novo => {
+              setModalNovo(false)
+              // se criou alimento, pré-seleciona com qty 1
+              if (novo) setSelectedFoods(prev => ({ ...prev, [novo.id]: 1 }))
+            }}
+            onSave={onNovoAlimento}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
@@ -320,10 +650,11 @@ export default function Alimentacao() {
     `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-01`
   )
   const [filterEnd,   setFilterEnd]   = useState(hojeStr)
-  const [refeicoes,   setRefeicoes]   = useState([])
-  const [loading,     setLoading]     = useState(true)
-  const [modalOpen,   setModalOpen]   = useState(false)
-  const [enviando,    setEnviando]    = useState(false)
+  const [refeicoes,        setRefeicoes]        = useState([])
+  const [loading,          setLoading]          = useState(true)
+  const [modalOpen,        setModalOpen]        = useState(false)
+  const [enviando,         setEnviando]         = useState(false)
+  const [tabelaNutricional, setTabelaNutricional] = useState([])
 
   const [chartView,     setChartView]     = useState('calorias')
   const [calMes,        setCalMes]        = useState(hoje.getMonth())
@@ -364,22 +695,27 @@ export default function Alimentacao() {
     setFilterStart(`${ano}-${String(mes).padStart(2,'0')}-01`)
     setFilterEnd(new Date(ano, mes, 0).toISOString().split('T')[0])
   }, [mes, ano])
+  useEffect(() => {
+    api.get('/alimentacao/tabela-nutricional')
+      .then(r => setTabelaNutricional(r.data || []))
+      .catch(() => {})
+  }, [])
 
-  async function salvarRefeicao(form) {
-    if (!form.calorias || !form.descricao) return
+  async function salvarRefeicaoCompleta({ data, tipo, itens }) {
+    if (!itens.length) return
     setEnviando(true)
     try {
-      await api.post('/alimentacao/refeicao-item', {
-        user_id: userId, data: form.data, tipo: form.tipo, descricao: form.descricao,
-        calorias:     parseInt(form.calorias)       || 0,
-        proteinas:    parseFloat(form.proteinas)    || 0,
-        carboidratos: parseFloat(form.carboidratos) || 0,
-        gorduras:     parseFloat(form.gorduras)     || 0,
-      })
+      await api.post('/alimentacao/refeicao-completa', { user_id: userId, data, tipo, itens })
       setModalOpen(false)
       fetchRefeicoes()
     } catch(e) { console.error(e) }
     finally    { setEnviando(false) }
+  }
+
+  async function criarAlimentoNutricional(payload) {
+    const r = await api.post('/alimentacao/tabela-nutricional', payload)
+    setTabelaNutricional(prev => [...prev, r.data].sort((a, b) => a.alimento.localeCompare(b.alimento)))
+    return r.data
   }
 
   // ── Derivações ───────────────────────────────────────────────────────────────
@@ -1138,7 +1474,13 @@ export default function Alimentacao() {
 
       <AnimatePresence>
         {modalOpen && (
-          <ModalRefeicao onClose={() => setModalOpen(false)} onSave={salvarRefeicao} enviando={enviando} />
+          <ModalRefeicao
+            onClose={() => setModalOpen(false)}
+            onSave={salvarRefeicaoCompleta}
+            enviando={enviando}
+            tabela={tabelaNutricional}
+            onNovoAlimento={criarAlimentoNutricional}
+          />
         )}
       </AnimatePresence>
     </motion.div>
