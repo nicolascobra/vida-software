@@ -34,7 +34,7 @@ function Login() {
         width: 340, padding: 32, backgroundColor: '#fff',
         border: '1px solid #e5e7eb', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
       }}>
-        <h1 style={{ textAlign: 'center', marginBottom: 8, fontSize: 22 }}>Vida Dashboard</h1>
+        <h1 style={{ textAlign: 'center', marginBottom: 8, fontSize: 22 }}>vtr Dashboard</h1>
         <p style={{ textAlign: 'center', color: '#6b7280', fontSize: 14, marginBottom: 24 }}>
           Entre com seu usuário e senha
         </p>

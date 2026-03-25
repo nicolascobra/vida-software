@@ -35,7 +35,7 @@ export default function Home() {
           Olá, {userId}
         </p>
         <h1 className="title" style={{ fontSize: 32 }}>
-          Vida App
+          vtr
         </h1>
       </div>
 
