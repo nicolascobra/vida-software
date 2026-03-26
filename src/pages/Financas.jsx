@@ -792,6 +792,53 @@ export default function Financas() {
           </div>
         </div>
 
+        {/* ── Day filter strip ── */}
+        {(() => {
+          const daysCount   = new Date(ano, mes, 0).getDate()
+          const firstDay    = `${ano}-${String(mes).padStart(2,'0')}-01`
+          const lastDay     = new Date(ano, mes, 0).toISOString().split('T')[0]
+          const isFullMonth = filterStart === firstDay && filterEnd === lastDay
+          const hasDataSet  = new Set(transacoes.map(t => t.data))
+          return (
+            <div style={{ display: 'flex', gap: 3, overflowX: 'auto', marginBottom: 14, paddingBottom: 2, scrollbarWidth: 'none' }}>
+              <button
+                onClick={() => { setFilterStart(firstDay); setFilterEnd(lastDay) }}
+                style={{
+                  flexShrink: 0, padding: '3px 10px', borderRadius: 20,
+                  border: `1px solid ${isFullMonth ? T.teal : 'rgba(0,0,0,0.15)'}`,
+                  background: isFullMonth ? T.teal : 'transparent',
+                  color: isFullMonth ? '#fff' : T.textSub,
+                  fontSize: 10, fontWeight: 700, fontFamily: T.fontBody, cursor: 'pointer',
+                }}
+              >Mês</button>
+              {Array.from({ length: daysCount }).map((_, i) => {
+                const day = i + 1
+                const ds  = `${ano}-${String(mes).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+                const hasData    = hasDataSet.has(ds)
+                const isSelected = filterStart === ds && filterEnd === ds
+                const isFuture   = ds > hojeStr
+                return (
+                  <button key={day}
+                    onClick={() => { if (!isFuture) { setFilterStart(ds); setFilterEnd(ds) } }}
+                    style={{
+                      flexShrink: 0, width: 28, display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', gap: 2, padding: '3px 0',
+                      borderRadius: 6, border: `1px solid ${isSelected ? T.teal : 'rgba(0,0,0,0.10)'}`,
+                      background: isSelected ? T.teal : 'transparent',
+                      color: isSelected ? '#fff' : isFuture ? T.textMut : T.text,
+                      fontSize: 10, fontWeight: 600, fontFamily: T.fontBody,
+                      cursor: isFuture ? 'default' : 'pointer', opacity: isFuture ? 0.4 : 1,
+                    }}
+                  >
+                    {day}
+                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: hasData ? (isSelected ? '#fff' : T.teal) : 'transparent' }} />
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })()}
+
         {/* ── 3 colunas ── */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 2.8fr 1.4fr', gap: 14 }}>
 
@@ -999,6 +1046,7 @@ export default function Financas() {
                     const dataStr = `${y}-${m}-${String(dia).padStart(2,'0')}`
                     const dayTrans = transacoes.filter(t => t.data === dataStr)
                     setDayDetail({ data: dataStr, transacoes: dayTrans })
+                    setFilterStart(dataStr); setFilterEnd(dataStr)
                   }}
                   style={{ cursor: 'crosshair' }}
                 >
@@ -1081,7 +1129,7 @@ export default function Financas() {
                       whileHover={isFuturo ? {} : { scale: 1.2 }}
                       whileTap={isFuturo ? {} : { scale: 0.92 }}
                       transition={springSnappy}
-                      onClick={() => !isFuturo && setDayDetail({ data: dataStr, transacoes: dayTrans })}
+                      onClick={() => { if (!isFuturo) { setDayDetail({ data: dataStr, transacoes: dayTrans }); setFilterStart(dataStr); setFilterEnd(dataStr) } }}
                       title={spendingByDay[dia] ? fmt(spendingByDay[dia]) : undefined}
                       style={{
                         textAlign: 'center', padding: '5px 0', borderRadius: 5,

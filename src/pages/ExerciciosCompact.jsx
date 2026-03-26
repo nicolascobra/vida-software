@@ -712,7 +712,35 @@ function ExerciciosCompact() {
           transition={{ ...springFluid, delay: 0.05 }}
           style={{ ...heroCard, marginBottom: 14 }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr 1.2fr', gap: 28, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1.1fr 1fr 1.2fr', gap: 28, alignItems: 'center' }}>
+
+            {/* Score ring */}
+            {(() => {
+              const pct = consistencia.pct / 100
+              const r = 32, circ = 2 * Math.PI * r
+              const ringColor = consistencia.pct >= 80 ? T.qGreen : consistencia.pct >= 50 ? T.qYellow : T.qRed
+              return (
+                <div style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}>
+                  <svg width="80" height="80" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle cx="40" cy="40" r={r} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth={6} />
+                    <motion.circle
+                      cx="40" cy="40" r={r} fill="none"
+                      stroke={ringColor} strokeWidth={6}
+                      strokeLinecap="round"
+                      initial={{ strokeDashoffset: circ }}
+                      animate={{ strokeDashoffset: circ - circ * pct }}
+                      transition={{ duration: 1.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+                      style={{ strokeDasharray: circ }}
+                    />
+                  </svg>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontFamily: T.fontHead, fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em' }}>
+                      {consistencia.pct}%
+                    </span>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* KPI principal: consistência */}
             <div>
@@ -807,6 +835,52 @@ function ExerciciosCompact() {
             }}
           >+ Mais um treino</motion.button>
         </div>
+
+        {/* ── Day filter strip ── */}
+        {(() => {
+          const daysCount = new Date(ano, mes, 0).getDate()
+          const firstDay  = `${ano}-${String(mes).padStart(2,'0')}-01`
+          const lastDay   = new Date(ano, mes, 0).toISOString().split('T')[0]
+          const isFullMonth = filterStart === firstDay && filterEnd === lastDay
+          return (
+            <div style={{ display: 'flex', gap: 3, overflowX: 'auto', marginBottom: 14, paddingBottom: 2, scrollbarWidth: 'none' }}>
+              <button
+                onClick={() => { setFilterStart(firstDay); setFilterEnd(lastDay) }}
+                style={{
+                  flexShrink: 0, padding: '3px 10px', borderRadius: 20,
+                  border: `1px solid ${isFullMonth ? T.ink : 'rgba(0,0,0,0.15)'}`,
+                  background: isFullMonth ? T.ink : 'transparent',
+                  color: isFullMonth ? '#fff' : T.textSub,
+                  fontSize: 10, fontWeight: 700, fontFamily: T.fontBody, cursor: 'pointer',
+                }}
+              >Mês</button>
+              {Array.from({ length: daysCount }).map((_, i) => {
+                const day = i + 1
+                const ds  = `${ano}-${String(mes).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+                const hasData    = diasOnSet.has(ds)
+                const isSelected = filterStart === ds && filterEnd === ds
+                const isFuture   = ds > hojeStr
+                return (
+                  <button key={day}
+                    onClick={() => { if (!isFuture) { setFilterStart(ds); setFilterEnd(ds) } }}
+                    style={{
+                      flexShrink: 0, width: 28, display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', gap: 2, padding: '3px 0',
+                      borderRadius: 6, border: `1px solid ${isSelected ? T.ink : 'rgba(0,0,0,0.10)'}`,
+                      background: isSelected ? T.ink : 'transparent',
+                      color: isSelected ? '#fff' : isFuture ? T.textMut : T.text,
+                      fontSize: 10, fontWeight: 600, fontFamily: T.fontBody,
+                      cursor: isFuture ? 'default' : 'pointer', opacity: isFuture ? 0.4 : 1,
+                    }}
+                  >
+                    {day}
+                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: hasData ? (isSelected ? '#fff' : T.ink) : 'transparent' }} />
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })()}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr 1fr', gap: 14, alignItems: 'start' }}>
 
@@ -1003,7 +1077,7 @@ function ExerciciosCompact() {
                       whileHover={isFuturo ? {} : { scale: 1.2 }}
                       whileTap={isFuturo ? {} : { scale: 0.95 }}
                       transition={springSnappy}
-                      onClick={() => !isFuturo && setDayDetail({ dataStr, treinos: treinosDia })}
+                      onClick={() => { if (!isFuturo) { setDayDetail({ dataStr, treinos: treinosDia }); setFilterStart(dataStr); setFilterEnd(dataStr) } }}
                       style={{
                         textAlign: 'center', padding: '6px 0', borderRadius: 6,
                         fontSize: 11, backgroundColor: bg, color: cor, fontWeight: fw,
