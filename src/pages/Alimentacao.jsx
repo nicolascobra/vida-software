@@ -999,6 +999,53 @@ export default function Alimentacao() {
             }}>+ Registrar refeição</motion.button>
         </div>
 
+        {/* ── Day filter strip ── */}
+        {(() => {
+          const daysCount   = new Date(ano, mes, 0).getDate()
+          const firstDay    = `${ano}-${String(mes).padStart(2,'0')}-01`
+          const lastDay     = new Date(ano, mes, 0).toISOString().split('T')[0]
+          const isFullMonth = filterStart === firstDay && filterEnd === lastDay
+          const hasDataSet  = new Set(refeicoes.map(r => r.data))
+          return (
+            <div style={{ display: 'flex', gap: 3, overflowX: 'auto', marginBottom: 14, paddingBottom: 2, scrollbarWidth: 'none' }}>
+              <button
+                onClick={() => { setFilterStart(firstDay); setFilterEnd(lastDay) }}
+                style={{
+                  flexShrink: 0, padding: '3px 10px', borderRadius: 20,
+                  border: `1px solid ${isFullMonth ? T.ink : 'rgba(0,0,0,0.15)'}`,
+                  background: isFullMonth ? T.ink : 'transparent',
+                  color: isFullMonth ? '#fff' : T.textSub,
+                  fontSize: 10, fontWeight: 700, fontFamily: T.fontBody, cursor: 'pointer',
+                }}
+              >Mês</button>
+              {Array.from({ length: daysCount }).map((_, i) => {
+                const day = i + 1
+                const ds  = `${ano}-${String(mes).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+                const hasData    = hasDataSet.has(ds)
+                const isSelected = filterStart === ds && filterEnd === ds
+                const isFuture   = ds > hojeStr
+                return (
+                  <button key={day}
+                    onClick={() => { if (!isFuture) { setFilterStart(ds); setFilterEnd(ds) } }}
+                    style={{
+                      flexShrink: 0, width: 28, display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', gap: 2, padding: '3px 0',
+                      borderRadius: 6, border: `1px solid ${isSelected ? T.ink : 'rgba(0,0,0,0.10)'}`,
+                      background: isSelected ? T.ink : 'transparent',
+                      color: isSelected ? '#fff' : isFuture ? T.textMut : T.text,
+                      fontSize: 10, fontWeight: 600, fontFamily: T.fontBody,
+                      cursor: isFuture ? 'default' : 'pointer', opacity: isFuture ? 0.4 : 1,
+                    }}
+                  >
+                    {day}
+                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: hasData ? (isSelected ? '#fff' : T.ink) : 'transparent' }} />
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })()}
+
         {/* ── Conteúdo ── */}
         {loading ? (
           <p style={{ color: T.textMut, fontSize: 13, textAlign: 'center', padding: '48px 0' }}>Carregando…</p>
@@ -1207,13 +1254,14 @@ export default function Alimentacao() {
                     return (
                       <div key={dia} style={{ position: 'relative' }}>
                         <div
+                          onClick={() => { if (data && !isFut) { setFilterStart(ds); setFilterEnd(ds) } }}
                           onMouseEnter={() => data && setHoveredCalDay(ds)}
                           onMouseLeave={() => setHoveredCalDay(null)}
                           style={{
                             aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
                             borderRadius: 4, background: bg,
                             fontSize: 8, fontWeight: sc !== null ? 700 : 400, color: col,
-                            fontFamily: T.fontBody, cursor: data ? 'default' : 'default',
+                            fontFamily: T.fontBody, cursor: data && !isFut ? 'pointer' : 'default',
                             outline: isHoje ? `2px solid ${T.ink}` : 'none', outlineOffset: '-1px',
                           }}
                         >{dia}</div>
